@@ -1,69 +1,88 @@
-# QACGAN: Quantum-Enhanced Generative Adversarial Networks
+# VQE-in-GAN: Exploratory Integration of VQE-Inspired Energy Terms in GANs
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![Qiskit](https://img.shields.io/badge/Qiskit-1.0+-6929C4.svg)](https://qiskit.org/)
+[![Status](https://img.shields.io/badge/status-Proof%20of%20Concept-orange.svg)]()
 
-> **Official repository for the research paper:**  
-> *"Quantum-Enhanced Generative Adversarial Networks: VQE-based Regularization for Improved Training Stability and Performance"*
+> **⚠️ Important:** This is an **exploratory proof of concept**, not a performance benchmark.  
+> We do **not** claim quantum advantage or improved performance over classical methods.
 
-## 📋 Abstract
+## 📋 Overview
 
-This repository contains the implementation of **QACGAN** (Quantum-enhanced Auxiliary Classifier GAN), a hybrid quantum-classical architecture that integrates Variational Quantum Eigensolver (VQE)-based energy terms as auxiliary regularization signals in GANs. The method uses class-specific Ising Hamiltonians to provide physics-inspired priors that stabilize early training dynamics.
+This repository accompanies the paper:
 
-### Key Results on MNIST
+> *"Differentiable Energy-Based Regularization in GANs: A Simulator-Based Exploration of VQE-Inspired Auxiliary Losses"*
 
-| Metric | ACGAN (50 ep.) | QACGAN (5 ep.) | QACGAN (10 ep., run 1) | QACGAN (10 ep., run 2) |
-|--------|----------------|----------------|------------------------|------------------------|
-| Best FID ↓ | 24.02 (@20 ep.) | **19.92** (@5 ep.) | 23.91 (@10 ep.) | 23.23 (@9 ep.) |
-| Best IS ↑ | 2.23 (@25 ep.) | 2.07 (@5 ep.) | 2.29 (@2 ep.) | **2.32** (@4 ep.) |
-| Accuracy @ 5 ep. | 87.8% | 99.0% | 99.0% | **100.0%** |
-| Training Time | 0h 27m | 7h 17m | 14h 2m | 14h 9m |
+We investigate whether VQE-computed energy terms can serve as auxiliary regularization signals in GAN training. The primary contribution is **methodological**: demonstrating the technical feasibility of integrating differentiable VQE pathways into generative model training loops.
+
+### What This Is
+
+- ✅ **Technical feasibility demonstration** of VQE-GAN integration
+- ✅ **Boundary exploration** of hybrid quantum-classical generative models
+- ✅ **Open-source reference implementation** for reproducibility
+
+### What This Is NOT
+
+- ❌ **NOT** a claim of quantum advantage
+- ❌ **NOT** a performance improvement over classical methods
+- ❌ **NOT** validated on real quantum hardware
+
+## 🔬 Honest Results Summary
+
+| Metric | ACGAN Baseline | Energy-Regularized (5 ep.) | Notes |
+|--------|----------------|----------------------------|-------|
+| Accuracy @ 5 ep. | 87.8% | 99–100% | *Consistent across runs* |
+| FID @ 5 ep. | — | 19.92–35.96 | *High variance (CV≈25%)* |
+| Best FID | 24.02 (@20 ep.) | ~23–24 (extended runs) | *Comparable after convergence* |
+
+**Key observations:**
+- The auxiliary energy term appears to influence class conditioning (high accuracy consistency)
+- Sample quality (FID) shows high variance and converges to baseline-comparable values
+- We **cannot conclude** whether observed effects are specific to VQE or would occur with any class-dependent auxiliary signal
+
+## ⚠️ Critical Limitations
+
+1. **No ablation against classical baselines.** We did not compare against equivalent classical regularizers (e.g., MLP-based class-dependent scalars). The observed effects may simply reflect the presence of *any* auxiliary class-dependent signal.
+
+2. **Trivial Hamiltonian design.** The Ising Hamiltonian uses a deliberately simple linear parameterization that encodes no meaningful physics or problem structure.
+
+3. **Simulator-only evaluation.** All results use a noiseless statevector simulator. Real quantum hardware behavior is unknown.
+
+4. **Small scale.** Limited to 4 qubits, MNIST, and relatively few evaluation samples.
+
+5. **High computational overhead.** ~200× slower than classical ACGAN due to Python-level simulation.
 
 ## 🏗️ Architecture
 
-QACGAN extends the classical ACGAN by adding a VQE-based energy term to the generator objective:
+The model extends ACGAN by adding a VQE-based energy term to the generator objective:
 
 $$\mathcal{L}_{G} = \mathcal{L}_{\text{adv}} + \mathcal{L}_{\text{aux}} + \lambda_{\text{VQE}} \cdot E_c$$
 
-where $E_c$ is the expectation value of a class-specific Ising Hamiltonian:
-
-$$H_c = -J \sum_{\langle i,j \rangle} \sigma_z^i \sigma_z^j - \sum_{i=1}^{N} h_{c,i} \sigma_z^i$$
-
-The quantum circuit uses Qiskit's `EfficientSU2` ansatz (4 qubits, 1 repetition) with differentiable parameter encoding via `EstimatorQNN` and `TorchConnector`.
+where $E_c$ is the expectation value of a class-specific Ising Hamiltonian computed via a 4-qubit `EfficientSU2` ansatz using Qiskit's `EstimatorQNN`.
 
 ## 📁 Repository Structure
 
 ```
-├── ACGAN_training.ipynb              # Classical ACGAN baseline (50 epochs)
-├── QACGAN_training_5Epochs.ipynb     # QACGAN exploratory run (5 epochs, seed 42)
-├── QACGAN_training_RUN1.ipynb        # QACGAN extended run 1 (10 epochs, seed 42)
-├── QACGAN_training_RUN2.ipynb        # QACGAN extended run 2 (10 epochs, seed 2025)
-├── MNIST_Classifier.ipynb            # External CNN classifier for evaluation
-├── mnist_classifier.pth              # Pretrained classifier weights
+├── QACGAN_training_5Epochs.ipynb     # Exploratory run (5 epochs)
+├── QACGAN_training_RUN1.ipynb        # Extended run 1 (10 epochs, seed 42)
+├── QACGAN_training_RUN2.ipynb        # Extended run 2 (10 epochs, seed 2025)
+├── qacgan_training_*.py              # Python script versions
 │
-├── acgan_results/                    # Classical ACGAN experiment results
-│   ├── acgan_images_output/          # Generated sample images per epoch
-│   ├── acgan_models_output/          # Saved model checkpoints
-│   └── acgan_training_logs.pkl       # Training metrics log
-│
-├── hybrid_acgan_results_RUN1/        # QACGAN Run 1 results (10 epochs)
-│   ├── hybrid_acgan_images_output/   # Generated samples
+├── hybrid_acgan_results_RUN1/        # Run 1 results
+│   ├── hybrid_acgan_images_output/   # Generated samples per epoch
 │   ├── hybrid_acgan_models_output/   # Model checkpoints
-│   └── mnist_classifier.pth          # Classifier for evaluation
+│   └── mnist_classifier.pth          # Evaluation classifier
 │
-├── hybrid_acgan_results_RUN2/        # QACGAN Run 2 results (10 epochs)
-│   └── ...
-│
-├── hybrid_qacgan_results_5Epochs/    # QACGAN 5-epoch exploratory results
-│   └── ...
+├── hybrid_acgan_results_RUN2/        # Run 2 results
+├── hybrid_qacgan_results_5Epochs/    # 5-epoch exploratory results
 │
 ├── LICENSE                           # MIT License
 └── README.md                         # This file
 ```
 
-## 🚀 Getting Started
+## 🚀 Usage
 
 ### Prerequisites
 
@@ -74,48 +93,29 @@ The quantum circuit uses Qiskit's `EfficientSU2` ansatz (4 qubits, 1 repetition)
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/o0SilentStorm0o/VQE-in-GAN.git
 cd VQE-in-GAN
-
-# Install dependencies
 pip install torch torchvision qiskit qiskit-aer qiskit-machine-learning torch-fidelity
 ```
 
 ### Running Experiments
 
-The notebooks are designed to run on **Google Colab** with GPU acceleration:
+The notebooks are designed for **Google Colab** with GPU acceleration:
 
-1. **Classical Baseline**: Open `ACGAN_training.ipynb` and run all cells
-2. **QACGAN Training**: Open any `QACGAN_training_*.ipynb` notebook
-3. **Evaluation**: Use `MNIST_Classifier.ipynb` to evaluate generated samples
+1. Upload any `QACGAN_training_*.ipynb` notebook to Colab
+2. Enable GPU runtime
+3. Run all cells
 
-### Quick Start (Local)
+### Loading Pretrained Models
 
 ```python
-# Load pretrained QACGAN generator
 import torch
-from models import HybridGenerator  # Define architecture as in notebook
 
-generator = HybridGenerator(latent_dim=100, n_classes=10)
-generator.load_state_dict(torch.load('hybrid_acgan_results_RUN1/hybrid_acgan_models_output/hybrid_generator_best.pth'))
-generator.eval()
-
-# Generate samples
-z = torch.randn(10, 100)
-labels = torch.arange(10)
-fake_images = generator(z, labels)
+# Load generator (define architecture as in notebook first)
+generator.load_state_dict(
+    torch.load('hybrid_acgan_results_RUN1/hybrid_acgan_models_output/hybrid_generator_best.pth')
+)
 ```
-
-## 📊 Evaluation Metrics
-
-All experiments are evaluated using:
-
-- **FID (Fréchet Inception Distance)**: Lower is better. Measures similarity between generated and real image distributions.
-- **IS (Inception Score)**: Higher is better. Measures quality and diversity of generated samples.
-- **Classification Accuracy**: Evaluated using a pretrained external CNN on 500 generated samples per epoch.
-
-Metrics are computed using `torch-fidelity` with 1,000 generated samples against MNIST test set.
 
 ## ⚙️ Hyperparameters
 
@@ -124,51 +124,44 @@ Metrics are computed using `torch-fidelity` with 1,000 generated samples against
 | Latent dimension | 100 |
 | Batch size | 64 (2×32 gradient accumulation) |
 | Learning rate | 2×10⁻⁴ |
-| Adam β₁, β₂ | 0.5, 0.999 |
-| λ_VQE | 0.1 |
+| λ_VQE | 0.1 (not tuned) |
 | Qubits | 4 |
-| Ansatz | EfficientSU2 (1 repetition) |
-| Quantum backend | StatevectorEstimator (noiseless) |
+| Ansatz | EfficientSU2 (1 rep.) |
+| Backend | StatevectorEstimator (noiseless) |
+
+## � Future Work (What Would Strengthen This)
+
+1. **Ablation studies** comparing against classical regularizers with equivalent structure
+2. **Statistical rigor** with confidence intervals over many more runs
+3. **Noise-aware backends** to assess hardware feasibility
+4. **Larger datasets** beyond MNIST
+5. **More expressive Hamiltonians** encoding meaningful problem structure
 
 ## 📖 Citation
 
-If you use this code in your research, please cite:
-
 ```bibtex
-@article{strnadel2025qacgan,
-  title={Quantum-Enhanced Generative Adversarial Networks: VQE-based Regularization for Improved Training Stability and Performance},
+@misc{strnadel2025vqegan,
+  title={Differentiable Energy-Based Regularization in GANs: 
+         A Simulator-Based Exploration of VQE-Inspired Auxiliary Losses},
   author={Strnadel, David},
-  journal={arXiv preprint},
-  year={2025}
+  year={2025},
+  note={Exploratory proof of concept. arXiv preprint.}
 }
 ```
-
-## ⚠️ Limitations
-
-- **Simulator-only**: All quantum computations run on a noiseless statevector simulator
-- **Small scale**: Limited to 4 qubits and MNIST dataset
-- **Computational cost**: QACGAN training is ~200× slower than classical ACGAN due to quantum simulation overhead
-- **Variance**: FID shows notable variance across runs (CV ≈ 25% at epoch 5)
-
-## 🔮 Future Work
-
-- Evaluation on noise-aware quantum hardware
-- Extension to more complex datasets (Fashion-MNIST, CIFAR-10)
-- Systematic ablation studies of λ_VQE
-- Adaptive scheduling of quantum regularization
 
 ## 🤝 Acknowledgments
 
 - Prof. Roman Šenkeřík (Tomas Bata University in Zlin) for supervision
-- [Qiskit](https://qiskit.org/) team for the quantum computing framework
-- [PyTorch](https://pytorch.org/) team for the deep learning framework
+- [Qiskit](https://qiskit.org/) and [PyTorch](https://pytorch.org/) teams
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
 **Author:** David Strnadel  
 **Affiliation:** Faculty of Applied Informatics, Tomas Bata University in Zlin  
 **Contact:** d_strnadel@utb.cz
+
+*This work represents exploratory research. We encourage critical evaluation and welcome feedback.*
