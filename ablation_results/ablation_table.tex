@@ -1,0 +1,22 @@
+
+\begin{table}[h]
+\centering
+\caption{Ablation Study Results (Epoch 5, n=5 seeds). All variants use identical hyperparameters.}
+\label{tab:ablation}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Variant} & \textbf{Accuracy (\%)} & \textbf{FID} $\downarrow$ & \textbf{IS} $\uparrow$ & \textbf{LPIPS} \\
+\midrule
+Mlp-Energy & $99.1 \pm 0.5$ & $21.33 \pm 2.97$ & $2.11 \pm 0.04$ & $0.166 \pm 0.006$ \\
+Learned-Bias & $99.0 \pm 0.6$ & $18.43 \pm 1.03$ & $2.09 \pm 0.06$ & $0.164 \pm 0.007$ \\
+Random-Noise & $99.2 \pm 0.4$ & $20.77 \pm 3.67$ & $2.16 \pm 0.07$ & $0.165 \pm 0.006$ \\
+No-Regularizer & $99.0 \pm 0.4$ & $20.59 \pm 2.72$ & $2.11 \pm 0.05$ & $0.165 \pm 0.009$ \\
+\midrule
+QACGAN (VQE)$^*$ & $99.5 \pm 0.5$ & $27.9 \pm 8.0$ & $2.07 \pm 0.1$ & --- \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item $^*$Reference values from original experiments (3 seeds).
+\end{tablenotes}
+\end{table}
