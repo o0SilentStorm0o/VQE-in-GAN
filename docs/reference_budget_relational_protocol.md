@@ -2,7 +2,8 @@
 
 ## Status and scope
 
-This protocol was frozen before any run using the new per-minibatch budget controller. It follows
+This protocol was frozen before any outcome run using the new per-minibatch budget controller. It
+follows
 the failed fixed-weight circuit diagnostic and addresses its two measured confounds:
 
 1. the weighted coverage gradient on the image-producing generator parameters drifted apart
@@ -59,6 +60,32 @@ training, and replacing it by 1% would define a different full candidate.
 If either required norm is non-finite or the coverage norm is at or below machine epsilon, the run
 is invalid. There is no clipping, smoothing, fallback coefficient, or reuse of a nearby step.
 
+### Pre-outcome optimizer amendment
+
+A two-step implementation smoke test, performed without image evaluation, showed that exact raw
+matching alone left the counterfactual shared Adam effect 69%–83% different for product and
+18%–34% different for dephased. This is an optimizer confound, not a GAN outcome. The production
+runner had not been used, so the protocol was amended before either development phase began.
+
+Let `U_anchor^k` be the Adam displacement proposed from `g_anchor^k` using the current moments, and
+let `U_total^k` be the ordinary displacement after the raw-matched total gradient. The full branch
+records
+
+`s_t = ||U_total^F - U_anchor^F||_2 / ||U_anchor^F||_2`.
+
+After Adam updates a control's moments normally, its applied shared displacement is
+
+`U_anchor^k + alpha_t^k (U_total^k - U_anchor^k)`,
+
+where
+
+`alpha_t^k = s_t ||U_anchor^k||_2 / ||U_total^k - U_anchor^k||_2`.
+
+This adds a second independent budget control: the loss coefficient matches the raw gradient norm,
+while `alpha_t^k` matches the actual Adam-preconditioned auxiliary displacement. Neither operation
+rotates the circuit direction it controls. Adam's moments still receive the exact raw-matched total
+gradient. The full branch uses its ordinary Adam update with multiplier 1.0 and is unchanged.
+
 ## Phase A: fixed image-to-circuit map
 
 The entire angle head is zero-output initialized and frozen. Therefore the circuit angles are the
@@ -78,7 +105,8 @@ For each control, its angle gradient is independently scaled to norm `a_t`. Afte
 moments, the angle-head displacement is multiplied by `u_t / u_t^k`. This is exactly equivalent to
 changing only that step's angle-head learning rate because Adam's proposed displacement is linear
 in the learning rate; the per-parameter direction and moment updates are not altered. Shared
-parameters are never rescaled after their gradient is assigned.
+parameters use the shared Adam correction frozen above; the angle-head correction is applied
+independently.
 
 The angle-head parameters occupy their own Adam parameter group with the same frozen optimizer
 settings as the shared group. The full branch keeps multiplier 1.0. A zero or non-finite proposed
@@ -89,21 +117,20 @@ angle update invalidates the run.
 Before outcomes may be interpreted, every step in every branch must satisfy all applicable checks:
 
 1. achieved shared raw-gradient ratio relative error at most `1e-5`;
-2. Phase B achieved weighted raw angle-gradient norm relative error at most `1e-5`;
-3. Phase B actual angle-head displacement relative error at most `1e-4`;
-4. no skipped, clipped, fallback, zero-norm, or non-finite step;
-5. exactly 200 budget records, consumed once and in order by each control;
-6. schedule metadata match seed, phase, full variant, horizon, and frozen full coefficient;
-7. the schedule SHA-256 is recorded in each consuming run's provenance; and
-8. a fixed-weight full replay and a schedule-recording full replay are state-identical in the
+2. achieved shared Adam auxiliary-displacement ratio relative error at most `1e-4`;
+3. the analytical Adam proposal agrees with the optimizer's ordinary displacement within `1e-5`;
+4. Phase B achieved weighted raw angle-gradient norm relative error at most `1e-5`;
+5. Phase B actual angle-head displacement relative error at most `1e-4`;
+6. no skipped, clipped, fallback, zero-norm, or non-finite step;
+7. exactly 200 budget records, consumed once and in order by each control;
+8. schedule metadata match seed, phase, full variant, horizon, and frozen full coefficient;
+9. the schedule SHA-256 is recorded in each consuming run's provenance; and
+10. a fixed-weight full replay and a schedule-recording full replay are state-identical in the
    implementation test at a short deterministic horizon.
 
-The runner also records the full shared Adam displacement and a counterfactual Adam diagnostic for
-the auxiliary coverage contribution. These are diagnostics, not a second optimization target: a
-single scalar cannot in general match both raw norm and a direction-dependent Adam response
-without changing the circuit direction being tested. If a control's counterfactual auxiliary
-Adam ratio differs from the full target by more than 5% relative on a majority of steps, the
-outcome is reported as optimizer-sensitive and cannot support a quantum-specific claim.
+The runner records the uncorrected shared Adam mismatch and the applied correction multiplier in
+addition to the achieved value. A zero or non-finite anchor or auxiliary Adam displacement
+invalidates the run; there is no clipping or fallback multiplier.
 
 ## Frozen runs and evaluation
 
