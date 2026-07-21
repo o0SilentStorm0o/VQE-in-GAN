@@ -48,7 +48,7 @@ def collect_provenance(repository_root: Path) -> dict[str, Any]:
     return {
         "source_revision": revision,
         "source_dirty": bool(status),
-        "uv_lock_sha256": _sha256(lock_path),
+        "uv_lock_sha256": file_sha256(lock_path),
         "python": platform.python_version(),
         "platform": platform.platform(),
         "torch": torch.__version__,
@@ -71,7 +71,8 @@ def _git_output(repository_root: Path, *arguments: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
-def _sha256(path: Path) -> str | None:
+def file_sha256(path: str | Path) -> str | None:
+    path = Path(path)
     if not path.is_file():
         return None
     digest = hashlib.sha256()

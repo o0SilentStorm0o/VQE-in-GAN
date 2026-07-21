@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from vqe_gan.models import SharedQuantumGenerator
+from vqe_gan.models import SharedQuantumGenerator, initialize_weights
 from vqe_gan.quantum.losses import contrastive_energy_loss
 from vqe_gan.quantum.spec import HamiltonianFamily, IsingHamiltonianSpec
 from vqe_gan.quantum.torch_backend import TorchStatevectorEnergy
@@ -44,8 +44,20 @@ def test_quantum_loss_updates_shared_image_path() -> None:
     assert shared_gradient is not None
     assert torch.isfinite(shared_gradient).all()
     assert torch.count_nonzero(shared_gradient) > 0
-    assert generator.image_decoder[2].weight.grad is None
+    decoder_gradient = generator.image_decoder[2].weight.grad
+    assert decoder_gradient is not None
+    assert torch.count_nonzero(decoder_gradient) > 0
 
     optimizer.step()
     after = generator(noise, labels).detach()
     assert not torch.equal(before, after)
+
+
+def test_experiment_initialization_avoids_zero_angle_stationary_point() -> None:
+    generator = SharedQuantumGenerator()
+    generator.apply(initialize_weights)
+    output_layer = generator.angle_head[-2]
+
+    assert torch.count_nonzero(output_layer.bias) == generator.num_angles
+    assert output_layer.bias.min() < 0
+    assert output_layer.bias.max() > 0

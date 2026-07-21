@@ -32,8 +32,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dataset-limit", type=int)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--quantum-weight", type=float)
-    parser.add_argument("--quantum-temperature", type=float, default=1.0)
+    parser.add_argument("--regularizer-weight", type=float)
+    parser.add_argument("--regularizer-temperature", type=float, default=1.0)
+    parser.add_argument("--regularizer-gradient-ratio", type=float)
+    parser.add_argument("--gradient-diagnostics-every-steps", type=int, default=0)
     parser.add_argument("--checkpoint-every-steps", type=int, default=0)
     parser.add_argument("--no-download", action="store_true")
     return parser
@@ -41,9 +43,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
     variant = ExperimentVariant(arguments.variant)
-    quantum_weight = arguments.quantum_weight
-    if quantum_weight is None:
-        quantum_weight = 0.0 if variant is ExperimentVariant.NO_REGULARIZER else 0.1
+    regularizer_weight = arguments.regularizer_weight
+    if regularizer_weight is None:
+        regularizer_weight = 0.0 if variant is ExperimentVariant.NO_REGULARIZER else 1.0
     return ExperimentConfig(
         run_name=arguments.run_name,
         output_root=arguments.output_root,
@@ -57,8 +59,10 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
         dataset_limit=arguments.dataset_limit,
         batch_size=arguments.batch_size,
         num_workers=arguments.num_workers,
-        quantum_weight=quantum_weight,
-        quantum_temperature=arguments.quantum_temperature,
+        regularizer_weight=regularizer_weight,
+        regularizer_temperature=arguments.regularizer_temperature,
+        regularizer_gradient_ratio=arguments.regularizer_gradient_ratio,
+        gradient_diagnostics_every_steps=arguments.gradient_diagnostics_every_steps,
         checkpoint_every_steps=arguments.checkpoint_every_steps,
         download_dataset=not arguments.no_download,
     )

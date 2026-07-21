@@ -8,22 +8,29 @@ The image path intentionally retains the historical ACGAN structure:
 2. project to a $256\times7\times7$ feature map;
 3. upsample and decode it to a $1\times28\times28$ image.
 
-The corrected angle head reads that same projected feature map. It applies global average pooling
-followed by a small multilayer perceptron and produces 16 angles in $[-\pi,\pi]$. Therefore the
-class embedding and input projection are shared parameters, while the convolutional image decoder
-and angle head remain branch-specific.
+An initial correction attached the angle head directly to the projected feature map. A 500-step
+diagnostic pilot showed that the energy target could then be predicted equally well with ordinary
+noise and with zero noise. The head was reading the class embedding directly rather than depending
+on image content.
 
-This is a conservative correction: it preserves the ACGAN image generator and adds only 34,960
-angle-head parameters. The shared path contains 1,392,484 parameters. A quantum-loss-only test
-must produce non-zero gradients in this shared path and must change subsequent generated images
-for fixed noise and labels.
+The corrected angle head therefore reads only the completed $1\times28\times28$ generated image.
+Two small convolutional layers, global average pooling, and a multilayer perceptron produce 16
+angles in $[-\pi,\pi]$. The head receives no separate class label or latent vector. Regularizer
+gradients must traverse the complete image generator, including the convolutional decoder, before
+reaching the shared latent projection.
+
+The angle head contains 29,200 parameters. The complete generator contains 1,791,989 parameters,
+of which 1,762,789 belong to the image-producing path shared with the regularizer gradient.
+
+A regularizer-only test must produce non-zero gradients in both the input projection and image
+decoder and must change subsequent generated images for fixed noise and labels.
 
 ## Explicit computation boundary
 
 Image generation, angle production, and energy evaluation are separate operations:
 
 - ordinary generation invokes only the shared path and image decoder;
-- a quantum generator step computes images and angles from the shared representation once;
+- a quantum generator step generates each image once and derives angles from that image;
 - a discriminator step never produces angles or invokes an energy backend;
 - a zero-weight baseline never invokes an energy backend;
 - all ten class energies are obtained in one batched backend call.

@@ -26,8 +26,8 @@ No GAN training result is considered valid until these gates pass.
 
 ## Stage 2: corrected ACGAN computation graph
 
-The corrected generator will expose a shared representation used by both the image synthesis head
-and the angle-producing head. Automated tests must demonstrate that:
+The corrected generator will derive circuit angles from the completed generated image. Automated
+tests must demonstrate that:
 
 - the energy loss has a non-zero gradient with respect to shared generator parameters;
 - a step using only the energy loss changes the image-producing path;
@@ -52,4 +52,7 @@ tests.
 **Current status:** CPU and MPS/CPU-bridge smoke runs complete successfully. Repeated MPS runs with
 the same seed produced byte-identical structured metrics. Configuration, source provenance,
 dependency-lock digest, device placement, metrics, and atomic checkpoints are recorded per run.
-Full hypotheses, metrics, seed list, and exclusion criteria are not yet frozen.
+A 500-step exploratory pilot rejected both a direct feature-map angle head and fixed regularizer
+weighting. The corrected image-conditioned pilot and a candidate confirmatory protocol are recorded
+in `pilot_500_steps.md` and `ablation_protocol_draft.md`. Training duration, exact statistical
+tests, and equivalence bounds are not yet frozen.

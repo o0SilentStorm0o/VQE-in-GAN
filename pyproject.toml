@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 vqe-gan-train = "vqe_gan.cli:main"
+vqe-gan-evaluate = "vqe_gan.evaluation.cli:main"
 
 [project.optional-dependencies]
 dev = [

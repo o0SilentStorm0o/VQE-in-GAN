@@ -7,11 +7,12 @@ from torch import Tensor, nn
 
 
 class SharedQuantumGenerator(nn.Module):
-    """MNIST ACGAN generator whose image and circuit heads share a feature map.
+    """MNIST ACGAN generator whose circuit head consumes the generated image.
 
     The classical image path retains the historical label embedding, input projection, and
-    convolutional decoder. The angle head reads the projected 7x7 feature map, making the input
-    projection and label embedding causally shared with image synthesis.
+    convolutional decoder. The angle head reads only the completed generated image. Consequently,
+    regularizer gradients traverse the full image path and cannot read labels through a separate
+    shortcut.
     """
 
     def __init__(
@@ -51,12 +52,18 @@ class SharedQuantumGenerator(nn.Module):
             nn.Conv2d(64, image_channels, kernel_size=3, stride=1, padding=1),
             nn.Tanh(),
         )
+        angle_output = nn.Linear(128, num_angles)
+        angle_output.is_angle_output = True
         self.angle_head = nn.Sequential(
+            nn.Conv2d(image_channels, 32, kernel_size=3, stride=2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
-            nn.Linear(feature_channels, 128),
+            nn.Linear(64, 128),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(128, num_angles),
+            angle_output,
             nn.Tanh(),
         )
 
@@ -72,8 +79,8 @@ class SharedQuantumGenerator(nn.Module):
     def images_from_features(self, features: Tensor) -> Tensor:
         return self.image_decoder(features)
 
-    def angles_from_features(self, features: Tensor) -> Tensor:
-        return self.angle_head(features) * torch.pi
+    def angles_from_images(self, images: Tensor) -> Tensor:
+        return self.angle_head(images) * torch.pi
 
     def forward(self, noise: Tensor, class_labels: Tensor) -> Tensor:
         """Generate images without evaluating the angle head or a quantum backend."""
@@ -88,12 +95,13 @@ class SharedQuantumGenerator(nn.Module):
         """Generate images and circuit angles from one shared-feature computation."""
 
         features = self.shared_features(noise, class_labels)
-        return self.images_from_features(features), self.angles_from_features(features)
+        images = self.images_from_features(features)
+        return images, self.angles_from_images(images)
 
     def quantum_angles(self, noise: Tensor, class_labels: Tensor) -> Tensor:
         """Produce circuit angles without running the image decoder."""
 
-        return self.angles_from_features(self.shared_features(noise, class_labels))
+        return self.angles_from_images(self(noise, class_labels))
 
     def _validate_inputs(self, noise: Tensor, class_labels: Tensor) -> None:
         if noise.ndim != 2 or noise.shape[1] != self.latent_dim:
@@ -140,7 +148,11 @@ def initialize_weights(module: nn.Module) -> None:
     if isinstance(module, nn.Conv2d | nn.Linear):
         nn.init.normal_(module.weight, 0.0, 0.02)
         if module.bias is not None:
-            nn.init.zeros_(module.bias)
+            if getattr(module, "is_angle_output", False):
+                with torch.no_grad():
+                    module.bias.copy_(torch.linspace(-0.75, 0.75, module.bias.numel()))
+            else:
+                nn.init.zeros_(module.bias)
     elif isinstance(module, nn.BatchNorm2d):
         if module.weight is not None:
             nn.init.normal_(module.weight, 1.0, 0.02)

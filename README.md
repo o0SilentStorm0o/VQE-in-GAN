@@ -10,6 +10,9 @@ The historical and corrected Hamiltonian families, including the class-separatio
 specified in [`docs/hamiltonian_design.md`](docs/hamiltonian_design.md).
 The corrected shared generator and optimizer isolation are specified in
 [`docs/shared_generator_design.md`](docs/shared_generator_design.md).
+The current exploratory pilot and draft ablation protocol are documented in
+[`docs/pilot_500_steps.md`](docs/pilot_500_steps.md) and
+[`docs/ablation_protocol_draft.md`](docs/ablation_protocol_draft.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)

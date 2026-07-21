@@ -13,7 +13,7 @@ from vqe_gan.models.acgan import ACGANDiscriminator, SharedQuantumGenerator
 from vqe_gan.quantum.losses import contrastive_energy_loss
 
 
-class AllClassEnergyBackend(Protocol):
+class AllClassEnergyModel(Protocol):
     def all_energies(self, angles: Tensor) -> Tensor: ...
 
 
@@ -31,7 +31,9 @@ class GeneratorStepMetrics:
     total: float
     adversarial: float
     auxiliary: float
-    quantum: float
+    regularizer: float
+    effective_regularizer_weight: float
+    regularizer_to_gan_gradient_ratio: float | None
     mean_target_energy: float
 
 
@@ -89,20 +91,23 @@ def discriminator_step(
 def generator_step(
     generator: SharedQuantumGenerator,
     discriminator: ACGANDiscriminator,
-    energy_backend: AllClassEnergyBackend | None,
+    energy_model: AllClassEnergyModel | None,
     optimizer: torch.optim.Optimizer,
     noise: Tensor,
     class_labels: Tensor,
     *,
-    quantum_weight: float,
-    quantum_temperature: float = 1.0,
+    regularizer_weight: float,
+    regularizer_temperature: float = 1.0,
+    regularizer_gradient_ratio: float | None = None,
 ) -> GeneratorStepMetrics:
     """Update the generator while keeping discriminator parameters gradient-free."""
 
-    if quantum_weight < 0:
-        raise ValueError("quantum_weight must be non-negative")
-    if quantum_weight > 0 and energy_backend is None:
-        raise ValueError("energy_backend is required when quantum_weight is positive")
+    if regularizer_weight < 0:
+        raise ValueError("regularizer_weight must be non-negative")
+    if regularizer_weight > 0 and energy_model is None:
+        raise ValueError("energy_model is required when regularizer_weight is positive")
+    if regularizer_gradient_ratio is not None and regularizer_gradient_ratio <= 0:
+        raise ValueError("regularizer_gradient_ratio must be positive when set")
 
     optimizer.zero_grad(set_to_none=True)
     discriminator.zero_grad(set_to_none=True)
@@ -113,20 +118,20 @@ def generator_step(
         parameter.requires_grad_(False)
 
     try:
-        if quantum_weight > 0:
+        if regularizer_weight > 0:
             images, angles = generator.forward_with_angles(noise, class_labels)
-            assert energy_backend is not None
-            all_energies = energy_backend.all_energies(angles)
-            quantum = contrastive_energy_loss(
+            assert energy_model is not None
+            all_energies = energy_model.all_energies(angles)
+            regularizer = contrastive_energy_loss(
                 all_energies,
                 class_labels,
-                temperature=quantum_temperature,
+                temperature=regularizer_temperature,
             )
             target_energies = all_energies.gather(1, class_labels.unsqueeze(1)).squeeze(1)
             mean_target_energy = target_energies.mean()
         else:
             images = generator(noise, class_labels)
-            quantum = images.new_zeros(())
+            regularizer = images.new_zeros(())
             mean_target_energy = images.new_zeros(())
 
         adversarial_logits, class_logits = discriminator(images)
@@ -135,7 +140,35 @@ def generator_step(
             torch.ones_like(adversarial_logits),
         )
         auxiliary = functional.cross_entropy(class_logits, class_labels)
-        total = adversarial + auxiliary + quantum_weight * quantum
+        gan_objective = adversarial + auxiliary
+        effective_regularizer_weight = regularizer_weight
+        achieved_gradient_ratio = None
+        if regularizer_gradient_ratio is not None and regularizer_weight > 0:
+            shared_parameters = (
+                *generator.label_embedding.parameters(),
+                *generator.input_projection.parameters(),
+                *generator.image_decoder.parameters(),
+            )
+            gan_gradients = torch.autograd.grad(
+                gan_objective,
+                shared_parameters,
+                retain_graph=True,
+            )
+            regularizer_gradients = torch.autograd.grad(
+                regularizer,
+                shared_parameters,
+                retain_graph=True,
+            )
+            gan_norm = _tensor_gradient_norm(gan_gradients)
+            regularizer_norm = _tensor_gradient_norm(regularizer_gradients)
+            if regularizer_norm.item() <= torch.finfo(regularizer_norm.dtype).eps:
+                raise RuntimeError("regularizer gradient is too small for dynamic balancing")
+            effective_weight_tensor = (
+                regularizer_gradient_ratio * gan_norm / regularizer_norm
+            ).detach()
+            effective_regularizer_weight = effective_weight_tensor.item()
+            achieved_gradient_ratio = regularizer_gradient_ratio
+        total = gan_objective + effective_regularizer_weight * regularizer
         total.backward()
         optimizer.step()
     finally:
@@ -151,6 +184,12 @@ def generator_step(
         total=total.detach().item(),
         adversarial=adversarial.detach().item(),
         auxiliary=auxiliary.detach().item(),
-        quantum=quantum.detach().item(),
+        regularizer=regularizer.detach().item(),
+        effective_regularizer_weight=effective_regularizer_weight,
+        regularizer_to_gan_gradient_ratio=achieved_gradient_ratio,
         mean_target_energy=mean_target_energy.detach().item(),
     )
+
+
+def _tensor_gradient_norm(gradients: tuple[Tensor, ...]) -> Tensor:
+    return torch.stack([gradient.square().sum() for gradient in gradients]).sum().sqrt()

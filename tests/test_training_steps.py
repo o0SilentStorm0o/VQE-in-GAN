@@ -58,16 +58,19 @@ def test_quantum_backend_is_called_once_only_in_quantum_generator_step() -> None
         generator(noise, labels)
     assert backend.calls == 0
 
-    generator_step(
+    metrics = generator_step(
         generator,
         discriminator,
         backend,
         generator_optimizer,
         noise,
         labels,
-        quantum_weight=0.1,
+        regularizer_weight=0.1,
+        regularizer_gradient_ratio=0.1,
     )
     assert backend.calls == 1
+    assert metrics.regularizer_to_gan_gradient_ratio == 0.1
+    assert metrics.effective_regularizer_weight > 0
 
     generator_step(
         generator,
@@ -76,7 +79,7 @@ def test_quantum_backend_is_called_once_only_in_quantum_generator_step() -> None
         generator_optimizer,
         noise,
         labels,
-        quantum_weight=0.0,
+        regularizer_weight=0.0,
     )
     assert backend.calls == 1
 
@@ -97,7 +100,7 @@ def test_generator_step_does_not_change_or_populate_discriminator_gradients() ->
         optimizer,
         noise,
         labels,
-        quantum_weight=0.1,
+        regularizer_weight=0.1,
     )
 
     assert all(parameter.grad is None for parameter in discriminator.parameters())

@@ -24,7 +24,8 @@ class BenchmarkVariant:
     generator_optimizer: torch.optim.Optimizer
     discriminator_optimizer: torch.optim.Optimizer
     energy_backend: TorchStatevectorEnergy | DeviceBridgedEnergy | None
-    quantum_weight: float
+    regularizer_weight: float
+    regularizer_gradient_ratio: float | None
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -34,6 +35,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--repeats", type=int, default=10)
+    parser.add_argument("--gradient-ratio", type=float)
     return parser.parse_args()
 
 
@@ -49,6 +51,7 @@ def build_variant(
     quantum_device: torch.device,
     *,
     with_quantum: bool,
+    gradient_ratio: float | None,
 ) -> BenchmarkVariant:
     generator = SharedQuantumGenerator().to(device)
     discriminator = ACGANDiscriminator().to(device)
@@ -74,7 +77,8 @@ def build_variant(
             betas=(0.5, 0.999),
         ),
         energy_backend=energy_backend,
-        quantum_weight=0.1 if with_quantum else 0.0,
+        regularizer_weight=0.1 if with_quantum else 0.0,
+        regularizer_gradient_ratio=gradient_ratio if with_quantum else None,
     )
 
 
@@ -101,7 +105,8 @@ def run_step(
         variant.generator_optimizer,
         generator_noise,
         labels,
-        quantum_weight=variant.quantum_weight,
+        regularizer_weight=variant.regularizer_weight,
+        regularizer_gradient_ratio=variant.regularizer_gradient_ratio,
     )
 
 
@@ -122,13 +127,21 @@ def main() -> None:
     labels = torch.arange(arguments.batch_size, device=device) % 10
     discriminator_noise = torch.randn(arguments.batch_size, 100, device=device)
     generator_noise = torch.randn(arguments.batch_size, 100, device=device)
-    variants = {"no_regularizer": build_variant(device, device, with_quantum=False)}
+    variants = {
+        "no_regularizer": build_variant(
+            device,
+            device,
+            with_quantum=False,
+            gradient_ratio=None,
+        )
+    }
     variants.update(
         {
             f"quantum_contrastive_{name}": build_variant(
                 device,
                 quantum_device,
                 with_quantum=True,
+                gradient_ratio=arguments.gradient_ratio,
             )
             for name, quantum_device in selected_quantum_devices.items()
         }
@@ -179,6 +192,7 @@ def main() -> None:
         "batch_size": arguments.batch_size,
         "warmup": arguments.warmup,
         "repeats": arguments.repeats,
+        "gradient_ratio": arguments.gradient_ratio,
         "median_step_ms": medians,
         "quantum_overhead": overheads,
     }
