@@ -233,8 +233,11 @@ Passing the development gate licenses exactly two new controls:
 Both retain exact KDE weight `2e-5`, quantum coverage weight `0.0005662128371831583`, the same
 angle-head initialization and residual bound, the same references, and the same 200-step/evaluation
 protocol. Their weights are not recalibrated. The full variant is rerun alongside both controls on
-seeds 42 and 43. Its checkpoint hashes must exactly reproduce the development checkpoints before
-the ablations are interpreted.
+seeds 42 and 43. Its generator, discriminator, optimizer, step, and RNG states must exactly
+reproduce the development checkpoints before the ablations are interpreted. The whole-file
+checkpoint hashes are expected to differ because each file embeds a different `run_name` and
+`output_root`; the original wording incorrectly requested equality of those metadata-bearing file
+hashes. This correction changes no numerical acceptance condition.
 
 The circuit-specific gate passes only if:
 
@@ -245,3 +248,33 @@ The circuit-specific gate passes only if:
 
 If product or dephased matches or beats the full circuit under this rule, the development gain is
 not isolated to coherent entangling geometry. No held-out run is licensed in that case.
+
+## Circuit-ablation result
+
+The full replay was bitwise exact on every generator, discriminator, optimizer, step, and RNG
+state for both seeds. The ablation matrix ran from revision
+`9beb9aaf17b68f34e0cffde5cb8f216b2fae11ac`.
+
+| Variant | Mean accuracy | Mean FID | Mean class-FID | Mean precision | Mean recall | Mean diversity |
+|---|---:|---:|---:|---:|---:|---:|
+| Product | 0.7051 | 0.3503 | 0.4121 | 0.4432 | 0.0237 | 0.5618 |
+| Dephased | 0.6353 | 0.3256 | 0.3902 | 0.4682 | 0.0278 | 0.5921 |
+| Full | 0.6736 | 0.3381 | 0.4023 | 0.4332 | 0.0272 | 0.5745 |
+
+Full improves mean class-FID over product by `0.0099` and diversity by `0.0127`, but loses
+accuracy by `0.0315`; the product accuracy condition fails. Dephased improves class-FID over full
+by `0.0120` and diversity by `0.0175`; the dephased class-FID and diversity conditions fail. The
+frozen circuit-specific gate therefore **fails**, and no held-out run is licensed.
+
+This matrix also exposes a diagnostic limitation of the same-coefficient ablation. On a common
+initial diagnostic batch, the fixed coefficient gives full a weighted coverage/GAN gradient ratio
+of about `0.22%` to `0.25%`, dephased `1.99%` to `4.03%`, and product `7.70%` to `8.78%`. Removing
+circuit operations changes kernel scale as well as geometry. The failed preregistered gate remains
+failed, but the relative product/dephased outcomes cannot cleanly distinguish representation from
+optimization strength. A separately labelled post-hoc gradient-matched diagnostic is required to
+answer that narrower causal question; it cannot restore the failed gate or turn development seeds
+into confirmatory evidence.
+
+Complete results and replay comparisons are preserved in
+[`relational_coverage_ablation_results.json`](relational_coverage_ablation_results.json), SHA-256
+`98b22f6d5337f520ca0467e5b08c8c55cc6259d4d6ac0edbdcb784e5aeae656b`.
