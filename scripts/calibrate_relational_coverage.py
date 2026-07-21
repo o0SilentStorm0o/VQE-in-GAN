@@ -37,6 +37,11 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--dataset-root", default="data")
     parser.add_argument("--reference-samples-per-class", type=int, default=1_024)
     parser.add_argument("--download", action="store_true")
+    parser.add_argument(
+        "--all-kernels",
+        action="store_true",
+        help="Also calibrate the product and dephased diagnostic controls.",
+    )
     return parser.parse_args()
 
 
@@ -49,9 +54,16 @@ def main() -> None:
         raise ValueError("reference-samples-per-class must be positive")
 
     repository_root = Path(__file__).resolve().parents[1]
+    calibration_kernels = (
+        _KERNELS
+        if arguments.all_kernels
+        else (
+            RelationalKernel.CLASSICAL_PERIODIC_RBF,
+            RelationalKernel.QUANTUM_FULL,
+        )
+    )
     measurements: dict[str, list[dict[str, object]]] = {
-        RelationalKernel.CLASSICAL_PERIODIC_RBF.value: [],
-        RelationalKernel.QUANTUM_FULL.value: [],
+        kernel.value: [] for kernel in calibration_kernels
     }
     structural_checks: list[dict[str, object]] = []
     for seed in _SEEDS:
@@ -93,10 +105,7 @@ def main() -> None:
             real_images, class_labels = next(batch_iterator)
             noise = torch.randn(real_images.shape[0], config.latent_dim)
             diagnostics = {}
-            for kernel in (
-                RelationalKernel.CLASSICAL_PERIODIC_RBF,
-                RelationalKernel.QUANTUM_FULL,
-            ):
+            for kernel in calibration_kernels:
                 diagnostic = measure_relational_gradient_diagnostics(
                     generator,
                     discriminator,
@@ -153,15 +162,20 @@ def main() -> None:
                     }
                 )
 
+    variant_for_kernel = {
+        RelationalKernel.CLASSICAL_PERIODIC_RBF: (
+            ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE
+        ),
+        RelationalKernel.QUANTUM_FULL: ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+        RelationalKernel.QUANTUM_PRODUCT: ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+        RelationalKernel.QUANTUM_DEPHASED: ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
+    }
     suggested_weights = {
-        ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE.value: statistics.median(
+        variant_for_kernel[kernel].value: statistics.median(
             float(record["candidate_weight"])
-            for record in measurements[RelationalKernel.CLASSICAL_PERIODIC_RBF.value]
-        ),
-        ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE.value: statistics.median(
-            float(record["candidate_weight"])
-            for record in measurements[RelationalKernel.QUANTUM_FULL.value]
-        ),
+            for record in measurements[kernel.value]
+        )
+        for kernel in calibration_kernels
     }
     result = {
         "schema_version": 1,
@@ -171,6 +185,7 @@ def main() -> None:
         "target_initial_shared_gradient_ratio": _TARGET_RATIO,
         "kde_weight": _KDE_WEIGHT,
         "reference_samples_per_class": arguments.reference_samples_per_class,
+        "all_kernels": arguments.all_kernels,
         "measurements": measurements,
         "suggested_weights": suggested_weights,
         "structural_checks": structural_checks,
