@@ -151,32 +151,32 @@ def test_contrastive_reference_rejects_online_gradient_balancing() -> None:
         )
 
 
-def test_relational_coverage_requires_an_explicit_precalibrated_weight() -> None:
-    with pytest.raises(ValueError, match="calibrated coverage_weight"):
+def test_relational_coverage_uses_frozen_calibration_and_allows_override() -> None:
+    quantum = config_from_arguments(
         build_parser().parse_args(
             [
                 "--run-name",
-                "uncalibrated-coverage",
+                "quantum-coverage",
                 "--variant",
                 "quantum_kde_relational_coverage",
             ]
         )
-        config_from_arguments(
-            build_parser().parse_args(
-                [
-                    "--run-name",
-                    "uncalibrated-coverage",
-                    "--variant",
-                    "quantum_kde_relational_coverage",
-                ]
-            )
-        )
-
-    config = config_from_arguments(
+    )
+    classical = config_from_arguments(
         build_parser().parse_args(
             [
                 "--run-name",
-                "calibrated-coverage",
+                "classical-coverage",
+                "--variant",
+                "classical_kde_relational_coverage",
+            ]
+        )
+    )
+    overridden = config_from_arguments(
+        build_parser().parse_args(
+            [
+                "--run-name",
+                "overridden-coverage",
                 "--variant",
                 "quantum_kde_relational_coverage",
                 "--coverage-weight",
@@ -184,9 +184,10 @@ def test_relational_coverage_requires_an_explicit_precalibrated_weight() -> None
             ]
         )
     )
-    assert config.variant.uses_relational_coverage
-    assert config.coverage_weight == 0.03
-    assert config.regularizer_weight == 2e-5
+    assert quantum.coverage_weight == 0.0005662128371831583
+    assert classical.coverage_weight == 0.0033809364895852783
+    assert overridden.coverage_weight == 0.03
+    assert quantum.regularizer_weight == classical.regularizer_weight == 2e-5
 
 
 def test_kde_scale_control_changes_only_the_outer_default_weight() -> None:

@@ -104,8 +104,12 @@ class ExperimentVariant(str, Enum):
 
     @property
     def default_coverage_weight(self) -> float:
-        """Return zero until the preregistered development calibration is committed."""
+        """Return the fixed median-gradient calibration for relational variants."""
 
+        if self is ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE:
+            return 0.0033809364895852783
+        if self is ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE:
+            return 0.0005662128371831583
         return 0.0
 
 

@@ -125,6 +125,34 @@ Calibration must also record, but not optimize against:
 - the fraction of the coverage gradient norm carried by the direct image path;
 - full/product/dephased loss and gradient differences on the same batch.
 
+### Frozen calibration result
+
+The calibration was executed from source revision `4bc24e8f09294e6100eea95b8581ce30817f79ce`
+with 1,024 real references per class. The committed outer weights are:
+
+- periodic classical coverage: `0.0033809364895852783`;
+- full quantum coverage: `0.0005662128371831583`.
+
+These are the exact medians produced by the rule above. After applying them, the individual
+initial coverage/GAN shared-gradient ratios span approximately `0.80%` to `1.65%` for the
+classical control and `0.20%` to `1.50%` for the quantum candidate; both medians are `1%`.
+
+The calibration already provides useful mechanism evidence, without any GAN outcome:
+
+- zero residual angles are exact and both matched variants retain an identical KDE loss;
+- both coverage losses reach the image-producing path and the final angle-output layer;
+- full/product and full/dephased gradient differences are nonzero on both seeds;
+- quantum-coverage/KDE gradient cosine is negative on all eight batches (`-0.752` to `-0.976`),
+  so the quantum term is not a rescaled copy of KDE;
+- quantum-coverage/GAN cosine is positive on all seed-42 batches and negative on all seed-43
+  batches, warning in advance that usefulness may remain trajectory-dependent.
+
+The complete values are preserved in
+[`relational_coverage_calibration.json`](relational_coverage_calibration.json), SHA-256
+`183ba751b92fed445b079650e52b783d1992634cbc637d2a051c1dd918b16e87`.
+Its dirty-source flag is caused by the pre-existing untracked PDF and temporary directory; the
+calibration source itself is the recorded committed revision.
+
 ## Structural gates before training
 
 The candidate is invalid unless tests and a real MNIST calibration batch show all of the following:
