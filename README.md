@@ -1,7 +1,18 @@
 # VQE-in-GAN: Exploratory Integration of VQE-Inspired Energy Terms in GANs
 
+> **Experiment redesign in progress:** The original notebooks and result artifacts are retained as
+> a historical record. A modular, parity-tested implementation is being developed under `src/`,
+> with the corrected protocol documented in `docs/experiment_v3_protocol.md`. New experimental
+> claims will only be based on this implementation after quantum energy and gradient parity tests
+> pass.
+
+The historical and corrected Hamiltonian families, including the class-separation objective, are
+specified in [`docs/hamiltonian_design.md`](docs/hamiltonian_design.md).
+The corrected shared generator and optimizer isolation are specified in
+[`docs/shared_generator_design.md`](docs/shared_generator_design.md).
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![Qiskit](https://img.shields.io/badge/Qiskit-1.0+-6929C4.svg)](https://qiskit.org/)
 [![Status](https://img.shields.io/badge/status-V2%20Negative%20Result-red.svg)]()
@@ -101,23 +112,45 @@ where $E_c$ is the expectation value of a class-specific Ising Hamiltonian compu
 
 ## 🚀 Usage
 
-### Prerequisites
+### Corrected implementation
 
-- Python 3.8+
-- CUDA-capable GPU (recommended)
-- Google Colab (for full quantum simulation)
+- Python 3.10–3.12
+- [uv](https://docs.astral.sh/uv/)
 
 ### Installation
 
 ```bash
 git clone https://github.com/o0SilentStorm0o/VQE-in-GAN.git
 cd VQE-in-GAN
-pip install torch torchvision qiskit qiskit-aer qiskit-machine-learning torch-fidelity lpips
+uv sync --extra dev
+uv run pytest -q
 ```
 
-### Running Experiments
+The dependency lock file is authoritative for the redesigned experiment. Quantum backend
+benchmarks can be reproduced with:
 
-The notebooks are designed for **Google Colab** with GPU acceleration:
+```bash
+uv run python benchmarks/benchmark_quantum_backends.py --backend all --batch-sizes 1 32 64
+```
+
+A two-step corrected MNIST smoke run can be started with:
+
+```bash
+uv run vqe-gan-train \
+  --run-name quantum-smoke \
+  --dataset-limit 128 \
+  --batch-size 64 \
+  --max-steps 2
+```
+
+On Apple Silicon, the default `auto` placement keeps the ACGAN on MPS and evaluates the small
+statevector on CPU. Full-step benchmark methodology and results are recorded in
+[`docs/training_step_benchmark.md`](docs/training_step_benchmark.md).
+
+### Historical notebooks
+
+The root-level notebooks belong to the original experiment and are retained for traceability.
+They were designed for **Google Colab** with GPU acceleration:
 
 1. Upload any notebook to Colab
 2. Enable GPU runtime (A100 recommended for ablation study)
