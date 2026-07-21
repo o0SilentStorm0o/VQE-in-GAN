@@ -1,0 +1,1331 @@
+{
+  "all_descriptive_margins_passed": false,
+  "audit_provenance": {
+    "platform": "macOS-26.5-arm64-arm-64bit",
+    "python": "3.12.13",
+    "qiskit": "1.4.6",
+    "source_dirty": true,
+    "source_revision": "4bd89daf202b15585bbfce74c21915f544cf344d",
+    "torch": "2.8.0",
+    "uv_lock_sha256": "df46fcf32f9b9bbbfc14b81342208804b1f836cec929f7ad2a1120221b682b25"
+  },
+  "calibration": {
+    "initial_common_geometry": [
+      {
+        "ablations": {
+          "quantum_dephased": {
+            "control_loss": 0.8950393795967102,
+            "full_loss": 0.9419374465942383,
+            "gradient_cosine": 0.9718443097860983,
+            "gradient_difference_norm": 5.545114613391452,
+            "loss_difference": 0.046898066997528076
+          },
+          "quantum_product": {
+            "control_loss": 0.781563401222229,
+            "full_loss": 0.9419374465942383,
+            "gradient_cosine": 0.9677969386455872,
+            "gradient_difference_norm": 3.839655984869835,
+            "loss_difference": 0.16037404537200928
+          }
+        },
+        "kde_loss_exact_between_matched_variants": true,
+        "reference_samples_per_class": 1024,
+        "seed": 42,
+        "zero_angle_residual": true
+      },
+      {
+        "ablations": {
+          "quantum_dephased": {
+            "control_loss": 0.8626919984817505,
+            "full_loss": 0.9414857029914856,
+            "gradient_cosine": 0.9752611195676767,
+            "gradient_difference_norm": 5.529124946252694,
+            "loss_difference": 0.07879370450973511
+          },
+          "quantum_product": {
+            "control_loss": 0.7691212892532349,
+            "full_loss": 0.9414857029914856,
+            "gradient_cosine": 0.955381376237514,
+            "gradient_difference_norm": 1.3691520586479269,
+            "loss_difference": 0.17236441373825073
+          }
+        },
+        "kde_loss_exact_between_matched_variants": true,
+        "reference_samples_per_class": 1024,
+        "seed": 43,
+        "zero_angle_residual": true
+      }
+    ],
+    "path": "docs/relational_gradient_matched_calibration.json",
+    "realized_ratio_summaries": {
+      "quantum_kde_relational_coverage": {
+        "maximum": 0.01498756012302121,
+        "median": 0.010366476908694373,
+        "minimum": 0.0020481516779999242
+      },
+      "quantum_kde_relational_dephased": {
+        "maximum": 0.014243341994990444,
+        "median": 0.010457607777069503,
+        "minimum": 0.0008318964848174515
+      },
+      "quantum_kde_relational_product": {
+        "maximum": 0.02085255708937512,
+        "median": 0.010004156319780575,
+        "minimum": 0.00781498751164663
+      }
+    },
+    "sha256": "e7f132c369677842af35fc5de786a6f7a714ecfc5ced93942b5330c14ec2ed95",
+    "target_initial_shared_gradient_ratio": 0.01,
+    "weights": {
+      "quantum_kde_relational_coverage": 0.0005662128371831583,
+      "quantum_kde_relational_dephased": 3.077098628673762e-05,
+      "quantum_kde_relational_product": 7.045240128892456e-05
+    }
+  },
+  "checks_by_control": {
+    "quantum_kde_relational_dephased": {
+      "full_accuracy_not_lower_by_more_than_0_005": false,
+      "full_class_fid_better_by_at_least_0_005": true,
+      "full_diversity_not_lower_by_more_than_0_005": true
+    },
+    "quantum_kde_relational_product": {
+      "full_accuracy_not_lower_by_more_than_0_005": false,
+      "full_class_fid_better_by_at_least_0_005": true,
+      "full_diversity_not_lower_by_more_than_0_005": true
+    }
+  },
+  "common_full_checkpoint_geometry": {
+    "quantum_kde_relational_dephased": {
+      "maximum_angle_gradient_cosine": 0.6301466226577759,
+      "maximum_shared_gradient_cosine": 0.9725071787834167,
+      "maximum_weighted_shared_norm_control_over_full": 0.023890606328430944,
+      "mean_angle_gradient_cosine": 0.5724177956581116,
+      "mean_shared_gradient_cosine": 0.968381941318512,
+      "mean_weighted_shared_norm_control_over_full": 0.022751141978806382,
+      "minimum_angle_gradient_cosine": 0.5146889686584473,
+      "minimum_shared_gradient_cosine": 0.9642567038536072,
+      "minimum_weighted_shared_norm_control_over_full": 0.02161167762918182
+    },
+    "quantum_kde_relational_product": {
+      "maximum_angle_gradient_cosine": 0.7985134124755859,
+      "maximum_shared_gradient_cosine": 0.9664048552513123,
+      "maximum_weighted_shared_norm_control_over_full": 0.14332588918591732,
+      "mean_angle_gradient_cosine": 0.7874050736427307,
+      "mean_shared_gradient_cosine": 0.9557247459888458,
+      "mean_weighted_shared_norm_control_over_full": 0.1277620169967423,
+      "minimum_angle_gradient_cosine": 0.7762967348098755,
+      "minimum_shared_gradient_cosine": 0.9450446367263794,
+      "minimum_weighted_shared_norm_control_over_full": 0.11219814480756728
+    }
+  },
+  "full_minus_controls": {
+    "quantum_kde_relational_dephased": [
+      {
+        "class_conditional_feature_fid_64": -0.030575844899469462,
+        "conditional_accuracy": -0.03519999980926514,
+        "diversity_ratio": 0.04377371997868351,
+        "feature_fid_64": -0.03896326925553145,
+        "feature_precision": 0.007400006055831909,
+        "feature_recall": -0.0027999989688396454,
+        "seed": 42
+      },
+      {
+        "class_conditional_feature_fid_64": 0.001272716437473509,
+        "conditional_accuracy": -0.02039998769760132,
+        "diversity_ratio": 0.0071477454779624305,
+        "feature_fid_64": -0.0023684846698949213,
+        "feature_precision": -0.05419999361038208,
+        "feature_recall": 0.0017999999690800905,
+        "seed": 43
+      },
+      {
+        "class_conditional_feature_fid_64": -0.014651564230997977,
+        "conditional_accuracy": -0.027799993753433228,
+        "diversity_ratio": 0.02546073272832297,
+        "feature_fid_64": -0.020665876962713187,
+        "feature_precision": -0.023399993777275085,
+        "feature_recall": -0.0004999994998797774,
+        "seed": "mean"
+      }
+    ],
+    "quantum_kde_relational_product": [
+      {
+        "class_conditional_feature_fid_64": -0.01404024804822912,
+        "conditional_accuracy": -0.0307999849319458,
+        "diversity_ratio": 0.01644847043067499,
+        "feature_fid_64": -0.018341103764956068,
+        "feature_precision": -0.0045999884605407715,
+        "feature_recall": 0.0016000010073184967,
+        "seed": 42
+      },
+      {
+        "class_conditional_feature_fid_64": 0.003551403858734259,
+        "conditional_accuracy": 0.014600038528442383,
+        "diversity_ratio": -0.00891843386637442,
+        "feature_fid_64": -0.001979310938579948,
+        "feature_precision": -0.048799991607666016,
+        "feature_recall": 0.002199999988079071,
+        "seed": 43
+      },
+      {
+        "class_conditional_feature_fid_64": -0.005244422094747431,
+        "conditional_accuracy": -0.008099973201751709,
+        "diversity_ratio": 0.0037650182821502842,
+        "feature_fid_64": -0.010160207351768008,
+        "feature_precision": -0.026699990034103394,
+        "feature_recall": 0.0019000004976987839,
+        "seed": "mean"
+      }
+    ]
+  },
+  "heldout_authorized": false,
+  "interpretation": {
+    "accuracy_tradeoff_within_frozen_margin": false,
+    "confirmatory_claim_permitted": false,
+    "control_shared_gradient_direction_close_to_full": true,
+    "entanglement_contribution_isolated": false,
+    "initial_gradient_match_persisted_at_full_checkpoint": false,
+    "mean_distributional_advantage_over_dephased": true,
+    "mean_distributional_advantage_over_product": true,
+    "phase_coherent_contribution_isolated": false
+  },
+  "mean_metrics": {
+    "quantum_kde_relational_coverage": {
+      "class_conditional_feature_fid_64": 0.40225124144243907,
+      "conditional_accuracy": 0.6736000180244446,
+      "diversity_ratio": 0.5745363201904244,
+      "feature_fid_64": 0.33814712620479326,
+      "feature_precision": 0.43320000171661377,
+      "feature_recall": 0.0272000003606081
+    },
+    "quantum_kde_relational_dephased": {
+      "class_conditional_feature_fid_64": 0.416902805673437,
+      "conditional_accuracy": 0.7014000117778778,
+      "diversity_ratio": 0.5490755874621014,
+      "feature_fid_64": 0.3588130031675064,
+      "feature_precision": 0.45659999549388885,
+      "feature_recall": 0.02769999986048788
+    },
+    "quantum_kde_relational_product": {
+      "class_conditional_feature_fid_64": 0.40749566353718647,
+      "conditional_accuracy": 0.6816999912261963,
+      "diversity_ratio": 0.5707713019082741,
+      "feature_fid_64": 0.34830733355656124,
+      "feature_precision": 0.45989999175071716,
+      "feature_recall": 0.025299999862909317
+    }
+  },
+  "protocol": "docs/relational_gradient_matched_diagnostic_protocol.md",
+  "runs": [
+    {
+      "seed": 42,
+      "variants": {
+        "quantum_kde_relational_coverage": {
+          "checkpoint_sha256": "40a730fc1446de3f8b547993cac97a70f8ab156a81c741f2c6c862427dcced87",
+          "common_checkpoint_kernel_geometry": {
+            "diagnostic_noise_seed": 94142,
+            "full_vs_controls": {
+              "quantum_kde_relational_dephased": {
+                "angle_gradient_cosine": 0.6301466226577759,
+                "coverage_loss_control_minus_full": -0.35521891713142395,
+                "shared_gradient_cosine": 0.9642567038536072,
+                "weighted_angle_norm_control_over_full": 0.03298140132260486,
+                "weighted_shared_norm_control_over_full": 0.02161167762918182
+              },
+              "quantum_kde_relational_product": {
+                "angle_gradient_cosine": 0.7985134124755859,
+                "coverage_loss_control_minus_full": -0.09001973271369934,
+                "shared_gradient_cosine": 0.9664048552513123,
+                "weighted_angle_norm_control_over_full": 0.19596324902640924,
+                "weighted_shared_norm_control_over_full": 0.11219814480756728
+              }
+            },
+            "measurements": {
+              "quantum_kde_relational_coverage": {
+                "angle_gradient_norm": 0.06115534156560898,
+                "angle_residual_rms": 2.6470420360565186,
+                "coverage_loss": 0.5507487654685974,
+                "coverage_weight": 0.0005662128371831583,
+                "shared_gradient_norm": 3.567936658859253,
+                "weighted_angle_gradient_norm": 3.462693945676859e-05,
+                "weighted_shared_gradient_norm": 0.0020202115385024957
+              },
+              "quantum_kde_relational_dephased": {
+                "angle_gradient_norm": 0.03711434453725815,
+                "angle_residual_rms": 2.6470420360565186,
+                "coverage_loss": 0.19552984833717346,
+                "coverage_weight": 3.077098628673762e-05,
+                "shared_gradient_norm": 1.4188742637634277,
+                "weighted_angle_gradient_norm": 1.1420449867972259e-06,
+                "weighted_shared_gradient_norm": 4.366016051286937e-05
+              },
+              "quantum_kde_relational_product": {
+                "angle_gradient_norm": 0.09631478041410446,
+                "angle_residual_rms": 2.6470420360565186,
+                "coverage_loss": 0.46072903275489807,
+                "coverage_weight": 7.045240128892456e-05,
+                "shared_gradient_norm": 3.217264175415039,
+                "weighted_angle_gradient_norm": 6.785607559789139e-06,
+                "weighted_shared_gradient_norm": 0.0002266639867388213
+              }
+            },
+            "reference_angles_exactly_shared": true
+          },
+          "config": {
+            "angle_residual_fraction": 0.1,
+            "ansatz_reps": 1,
+            "batch_size": 64,
+            "beta1": 0.5,
+            "beta2": 0.999,
+            "checkpoint_every_steps": 0,
+            "coherence_gradient_ratio": 0.05,
+            "contrastive_angle_scale": 0.75,
+            "contrastive_quantum_temperature": 0.04,
+            "contrastive_reference_samples_per_class": 1024,
+            "coverage_temperature": 0.1,
+            "coverage_weight": 0.0005662128371831583,
+            "dataset_limit": null,
+            "dataset_root": "data",
+            "density_mmd_angle_scale": 0.25,
+            "device": "cpu",
+            "download_dataset": false,
+            "epochs": 1,
+            "gradient_diagnostics_every_steps": 0,
+            "image_channels": 1,
+            "ising_coupling": 1.0,
+            "ising_field": 0.1,
+            "kde_sigma_squared": 0.03125,
+            "kde_temperature": 0.75,
+            "latent_dim": 100,
+            "learning_rate_discriminator": 0.0002,
+            "learning_rate_generator": 0.0002,
+            "log_every_steps": 1,
+            "max_steps": 200,
+            "modular_angle_scale": 0.125,
+            "modular_depolarization": 0.01,
+            "num_classes": 10,
+            "num_qubits": 4,
+            "num_workers": 0,
+            "output_root": "runs/relational-development-seed-42",
+            "quantum_device": "cpu",
+            "quantum_mixture_weight": 0.05,
+            "rbf_sigma_squared": 1.213,
+            "real_label_smoothing": 0.9,
+            "reference_samples_per_class": 256,
+            "regularizer_gradient_ratio": null,
+            "regularizer_temperature": 1.0,
+            "regularizer_weight": 2e-05,
+            "run_name": "quantum_kde_relational_coverage-seed-42",
+            "seed": 42,
+            "variant": "quantum_kde_relational_coverage"
+          },
+          "evaluation_seconds": 8.025555667001754,
+          "matrix_sha256": "95662fac8a894aaa86c00ebbe052c54de5a11b73cc846f7e79b809429f670176",
+          "metrics": {
+            "class_conditional_feature_fid_64": 0.34240669750490504,
+            "conditional_accuracy": 0.5662000179290771,
+            "diversity_ratio": 0.6536412506280845,
+            "feature_fid_64": 0.26899611857773714,
+            "feature_precision": 0.49140000343322754,
+            "feature_recall": 0.05000000074505806
+          },
+          "post_run_mechanism": {
+            "angle_head_change_norm": 2.5562074184417725,
+            "angle_head_changed_values": 29200,
+            "angle_head_max_abs_change": 0.039678268134593964,
+            "angle_parameter_changes": {
+              "0.bias": {
+                "change_norm": 0.19572019577026367,
+                "changed_values": 32,
+                "max_abs_change": 0.039678268134593964
+              },
+              "0.weight": {
+                "change_norm": 0.5056766867637634,
+                "changed_values": 288,
+                "max_abs_change": 0.03786745294928551
+              },
+              "2.bias": {
+                "change_norm": 0.21661348640918732,
+                "changed_values": 64,
+                "max_abs_change": 0.03288022056221962
+              },
+              "2.weight": {
+                "change_norm": 1.7841579914093018,
+                "changed_values": 18432,
+                "max_abs_change": 0.02752496860921383
+              },
+              "6.bias": {
+                "change_norm": 0.27228015661239624,
+                "changed_values": 128,
+                "max_abs_change": 0.029361145570874214
+              },
+              "6.weight": {
+                "change_norm": 1.4507262706756592,
+                "changed_values": 8192,
+                "max_abs_change": 0.02760726772248745
+              },
+              "8.bias": {
+                "change_norm": 0.06315357238054276,
+                "changed_values": 16,
+                "max_abs_change": 0.022505803033709526
+              },
+              "8.weight": {
+                "change_norm": 0.9095638394355774,
+                "changed_values": 2048,
+                "max_abs_change": 0.03811328485608101
+              }
+            },
+            "applied_angle_correction_rms": 0.26432008743286134,
+            "diagnostic_noise_seed": 94042,
+            "gradient_diagnostics": {
+              "angle_residual_rms": 2.6432008743286133,
+              "coverage_angle_head_norm": 0.05740639194846153,
+              "coverage_gan_cosine": 0.38657212257385254,
+              "coverage_kde_cosine": 0.7531360983848572,
+              "coverage_loss": 0.5600494742393494,
+              "coverage_shared_norm": 3.087970018386841,
+              "direct_coverage_shared_norm": 3.0761795043945312,
+              "direct_full_coverage_cosine": 0.9999957084655762,
+              "direct_to_full_coverage_norm_ratio": 0.9961817912991043,
+              "gan_objective_norm": 3.0670125484466553,
+              "indirect_coverage_shared_norm": 0.014935326762497425,
+              "kde_gan_cosine": 0.5144805312156677,
+              "kde_loss": 1.3958740234375,
+              "kde_norm": 24.528034210205078,
+              "weighted_coverage_to_gan_norm_ratio": 0.0005700818753196417,
+              "weighted_kde_to_gan_norm_ratio": 0.0001599474004280012
+            }
+          },
+          "run_directory": "runs/relational-development-seed-42/quantum_kde_relational_coverage-seed-42",
+          "source_dirty": true,
+          "source_revision": "22c72c51aa40b5d757e7a5b05074779f8767242d",
+          "training_seconds": 151.80613525002263,
+          "trajectory": {
+            "all_steps": {
+              "adversarial": 1.148165523558855,
+              "auxiliary": 0.3287025089748204,
+              "classical_regularizer": 3.756319361925125,
+              "coverage_regularizer": 0.6205736842751503,
+              "total": 1.4772945317625998,
+              "weighted_coverage_contribution": 0.0003513767864546383,
+              "weighted_kde_contribution": 7.51263872385025e-05
+            },
+            "first_20_steps": {
+              "adversarial": 0.9819603353738785,
+              "auxiliary": 2.064458352327347,
+              "classical_regularizer": 18.748037004470824,
+              "coverage_regularizer": 0.9249334633350372,
+              "total": 3.047317314147949,
+              "weighted_coverage_contribution": 0.0005237092004805762,
+              "weighted_kde_contribution": 0.00037496074008941654
+            },
+            "last_20_steps": {
+              "adversarial": 1.1681752443313598,
+              "auxiliary": 0.06484435005113483,
+              "classical_regularizer": 1.6477996826171875,
+              "coverage_regularizer": 0.535245081782341,
+              "total": 1.2333556100726129,
+              "weighted_coverage_contribution": 0.0003030626363443109,
+              "weighted_kde_contribution": 3.2955993652343754e-05
+            }
+          }
+        },
+        "quantum_kde_relational_dephased": {
+          "checkpoint_sha256": "741a8b32ca6bb2890bb78a972709cc372c1621dd809abd910584c83c8aa42896",
+          "config": {
+            "angle_residual_fraction": 0.1,
+            "ansatz_reps": 1,
+            "batch_size": 64,
+            "beta1": 0.5,
+            "beta2": 0.999,
+            "checkpoint_every_steps": 0,
+            "coherence_gradient_ratio": 0.05,
+            "contrastive_angle_scale": 0.75,
+            "contrastive_quantum_temperature": 0.04,
+            "contrastive_reference_samples_per_class": 1024,
+            "coverage_temperature": 0.1,
+            "coverage_weight": 3.077098628673762e-05,
+            "dataset_limit": null,
+            "dataset_root": "data",
+            "density_mmd_angle_scale": 0.25,
+            "device": "cpu",
+            "download_dataset": false,
+            "epochs": 10,
+            "gradient_diagnostics_every_steps": 0,
+            "image_channels": 1,
+            "ising_coupling": 1.0,
+            "ising_field": 0.1,
+            "kde_sigma_squared": 0.03125,
+            "kde_temperature": 0.75,
+            "latent_dim": 100,
+            "learning_rate_discriminator": 0.0002,
+            "learning_rate_generator": 0.0002,
+            "log_every_steps": 1,
+            "max_steps": 200,
+            "modular_angle_scale": 0.125,
+            "modular_depolarization": 0.01,
+            "num_classes": 10,
+            "num_qubits": 4,
+            "num_workers": 0,
+            "output_root": "runs/relational-gradient-matched-dephased-seed-42",
+            "quantum_device": "cpu",
+            "quantum_mixture_weight": 0.05,
+            "rbf_sigma_squared": 1.213,
+            "real_label_smoothing": 0.9,
+            "reference_samples_per_class": 256,
+            "regularizer_gradient_ratio": null,
+            "regularizer_temperature": 1.0,
+            "regularizer_weight": 2e-05,
+            "run_name": "quantum_kde_relational_dephased-seed-42",
+            "seed": 42,
+            "variant": "quantum_kde_relational_dephased"
+          },
+          "evaluation_seconds": 8.117097749956883,
+          "matrix_sha256": "e683722ae8e98a413399626a4acf7695d6449eb0ee23a317a4543ed09920038c",
+          "metrics": {
+            "class_conditional_feature_fid_64": 0.3729825424043745,
+            "conditional_accuracy": 0.6014000177383423,
+            "diversity_ratio": 0.609867530649401,
+            "feature_fid_64": 0.3079593878332686,
+            "feature_precision": 0.48399999737739563,
+            "feature_recall": 0.052799999713897705
+          },
+          "post_run_mechanism": {
+            "angle_head_change_norm": 0.08616216480731964,
+            "angle_head_changed_values": 27919,
+            "angle_head_max_abs_change": 0.0390162318944931,
+            "angle_parameter_changes": {
+              "0.bias": {
+                "change_norm": 0.0014759321929886937,
+                "changed_values": 32,
+                "max_abs_change": 0.000815024075563997
+              },
+              "0.weight": {
+                "change_norm": 0.003145934548228979,
+                "changed_values": 288,
+                "max_abs_change": 0.0006475262343883514
+              },
+              "2.bias": {
+                "change_norm": 0.004490681458264589,
+                "changed_values": 64,
+                "max_abs_change": 0.0017227791249752045
+              },
+              "2.weight": {
+                "change_norm": 0.0021070779766887426,
+                "changed_values": 17937,
+                "max_abs_change": 0.00019425339996814728
+              },
+              "6.bias": {
+                "change_norm": 0.020831286907196045,
+                "changed_values": 128,
+                "max_abs_change": 0.006535979453474283
+              },
+              "6.weight": {
+                "change_norm": 0.0014010100858286023,
+                "changed_values": 7406,
+                "max_abs_change": 0.0001720045693218708
+              },
+              "8.bias": {
+                "change_norm": 0.07758831232786179,
+                "changed_values": 16,
+                "max_abs_change": 0.0390162318944931
+              },
+              "8.weight": {
+                "change_norm": 0.030518628656864166,
+                "changed_values": 2048,
+                "max_abs_change": 0.00680918525904417
+              }
+            },
+            "applied_angle_correction_rms": 0.006165163964033127,
+            "diagnostic_noise_seed": 94042,
+            "gradient_diagnostics": {
+              "angle_residual_rms": 0.06165163964033127,
+              "coverage_angle_head_norm": 0.021402450278401375,
+              "coverage_gan_cosine": 0.5853244662284851,
+              "coverage_kde_cosine": 0.8290529847145081,
+              "coverage_loss": 0.24924452602863312,
+              "coverage_shared_norm": 1.3093665838241577,
+              "direct_coverage_shared_norm": 1.3093472719192505,
+              "direct_full_coverage_cosine": 0.9999999403953552,
+              "direct_to_full_coverage_norm_ratio": 0.9999852509563435,
+              "gan_objective_norm": 4.425590515136719,
+              "indirect_coverage_shared_norm": 2.29535889957333e-05,
+              "kde_gan_cosine": 0.7147291302680969,
+              "kde_loss": 1.7361180782318115,
+              "kde_norm": 38.57040786743164,
+              "weighted_coverage_to_gan_norm_ratio": 9.103983085954567e-06,
+              "weighted_kde_to_gan_norm_ratio": 0.00017430626595709835
+            }
+          },
+          "run_directory": "runs/relational-gradient-matched-dephased-seed-42/quantum_kde_relational_dephased-seed-42",
+          "source_dirty": true,
+          "source_revision": "fbe4028f069c895e44ee6def85b88b1861271e5e",
+          "training_seconds": 152.73182954196818,
+          "trajectory": {
+            "all_steps": {
+              "adversarial": 1.1422235947847366,
+              "auxiliary": 0.3294347942341119,
+              "classical_regularizer": 3.7946091616153717,
+              "coverage_regularizer": 0.2595929411798716,
+              "total": 1.4717422607541084,
+              "weighted_coverage_contribution": 7.987930833179714e-06,
+              "weighted_kde_contribution": 7.589218323230744e-05
+            },
+            "first_20_steps": {
+              "adversarial": 0.9822654783725738,
+              "auxiliary": 2.0644264698028563,
+              "classical_regularizer": 18.825581979751586,
+              "coverage_regularizer": 0.5009415149688721,
+              "total": 3.047083830833435,
+              "weighted_coverage_contribution": 1.5414464487564732e-05,
+              "weighted_kde_contribution": 0.0003765116395950318
+            },
+            "last_20_steps": {
+              "adversarial": 1.1173696637153625,
+              "auxiliary": 0.061044836230576036,
+              "classical_regularizer": 1.8363090336322785,
+              "coverage_regularizer": 0.2355581648647785,
+              "total": 1.1784584566950798,
+              "weighted_coverage_contribution": 7.24835706078318e-06,
+              "weighted_kde_contribution": 3.672618067264557e-05
+            }
+          }
+        },
+        "quantum_kde_relational_product": {
+          "checkpoint_sha256": "fc7a8ef584bf336d47d23801bf15f8e6702c144bd48332bee80775daba8bbaaf",
+          "config": {
+            "angle_residual_fraction": 0.1,
+            "ansatz_reps": 1,
+            "batch_size": 64,
+            "beta1": 0.5,
+            "beta2": 0.999,
+            "checkpoint_every_steps": 0,
+            "coherence_gradient_ratio": 0.05,
+            "contrastive_angle_scale": 0.75,
+            "contrastive_quantum_temperature": 0.04,
+            "contrastive_reference_samples_per_class": 1024,
+            "coverage_temperature": 0.1,
+            "coverage_weight": 7.045240128892456e-05,
+            "dataset_limit": null,
+            "dataset_root": "data",
+            "density_mmd_angle_scale": 0.25,
+            "device": "cpu",
+            "download_dataset": false,
+            "epochs": 10,
+            "gradient_diagnostics_every_steps": 0,
+            "image_channels": 1,
+            "ising_coupling": 1.0,
+            "ising_field": 0.1,
+            "kde_sigma_squared": 0.03125,
+            "kde_temperature": 0.75,
+            "latent_dim": 100,
+            "learning_rate_discriminator": 0.0002,
+            "learning_rate_generator": 0.0002,
+            "log_every_steps": 1,
+            "max_steps": 200,
+            "modular_angle_scale": 0.125,
+            "modular_depolarization": 0.01,
+            "num_classes": 10,
+            "num_qubits": 4,
+            "num_workers": 0,
+            "output_root": "runs/relational-gradient-matched-product-seed-42",
+            "quantum_device": "cpu",
+            "quantum_mixture_weight": 0.05,
+            "rbf_sigma_squared": 1.213,
+            "real_label_smoothing": 0.9,
+            "reference_samples_per_class": 256,
+            "regularizer_gradient_ratio": null,
+            "regularizer_temperature": 1.0,
+            "regularizer_weight": 2e-05,
+            "run_name": "quantum_kde_relational_product-seed-42",
+            "seed": 42,
+            "variant": "quantum_kde_relational_product"
+          },
+          "evaluation_seconds": 8.139930792036466,
+          "matrix_sha256": "d9a34528640c46713c6f98148ff981f77926c37cd307d34b798f1ad8f7af77dd",
+          "metrics": {
+            "class_conditional_feature_fid_64": 0.35644694555313416,
+            "conditional_accuracy": 0.597000002861023,
+            "diversity_ratio": 0.6371927801974095,
+            "feature_fid_64": 0.2873372223426932,
+            "feature_precision": 0.4959999918937683,
+            "feature_recall": 0.04839999973773956
+          },
+          "post_run_mechanism": {
+            "angle_head_change_norm": 1.9181913137435913,
+            "angle_head_changed_values": 29200,
+            "angle_head_max_abs_change": 0.05342094972729683,
+            "angle_parameter_changes": {
+              "0.bias": {
+                "change_norm": 0.1890120506286621,
+                "changed_values": 32,
+                "max_abs_change": 0.05329211801290512
+              },
+              "0.weight": {
+                "change_norm": 0.49095821380615234,
+                "changed_values": 288,
+                "max_abs_change": 0.05000559613108635
+              },
+              "2.bias": {
+                "change_norm": 0.23272399604320526,
+                "changed_values": 64,
+                "max_abs_change": 0.04849512130022049
+              },
+              "2.weight": {
+                "change_norm": 1.1309186220169067,
+                "changed_values": 18432,
+                "max_abs_change": 0.03167724609375
+              },
+              "6.bias": {
+                "change_norm": 0.35295623540878296,
+                "changed_values": 128,
+                "max_abs_change": 0.048876162618398666
+              },
+              "6.weight": {
+                "change_norm": 1.0064287185668945,
+                "changed_values": 8192,
+                "max_abs_change": 0.031070804223418236
+              },
+              "8.bias": {
+                "change_norm": 0.11668670922517776,
+                "changed_values": 16,
+                "max_abs_change": 0.04135051369667053
+              },
+              "8.weight": {
+                "change_norm": 0.958362340927124,
+                "changed_values": 2048,
+                "max_abs_change": 0.05342094972729683
+              }
+            },
+            "applied_angle_correction_rms": 0.24411063194274904,
+            "diagnostic_noise_seed": 94042,
+            "gradient_diagnostics": {
+              "angle_residual_rms": 2.4411063194274902,
+              "coverage_angle_head_norm": 0.06404424458742142,
+              "coverage_gan_cosine": 0.46013715863227844,
+              "coverage_kde_cosine": 0.7847551107406616,
+              "coverage_loss": 0.4736699163913727,
+              "coverage_shared_norm": 4.03523588180542,
+              "direct_coverage_shared_norm": 3.9631330966949463,
+              "direct_full_coverage_cosine": 0.9999693036079407,
+              "direct_to_full_coverage_norm_ratio": 0.9821317050050086,
+              "gan_objective_norm": 3.0361764430999756,
+              "indirect_coverage_shared_norm": 0.07864061743021011,
+              "kde_gan_cosine": 0.6465916633605957,
+              "kde_loss": 1.4821261167526245,
+              "kde_norm": 25.68853187561035,
+              "weighted_coverage_to_gan_norm_ratio": 9.363489341553447e-05,
+              "weighted_kde_to_gan_norm_ratio": 0.0001692163308492179
+            }
+          },
+          "run_directory": "runs/relational-gradient-matched-product-seed-42/quantum_kde_relational_product-seed-42",
+          "source_dirty": true,
+          "source_revision": "fbe4028f069c895e44ee6def85b88b1861271e5e",
+          "training_seconds": 153.05148870800622,
+          "trajectory": {
+            "all_steps": {
+              "adversarial": 1.137811280041933,
+              "auxiliary": 0.3276053419150412,
+              "classical_regularizer": 3.7391921848058702,
+              "coverage_regularizer": 0.5778393268585205,
+              "total": 1.4655321183800698,
+              "weighted_coverage_contribution": 4.071016813635853e-05,
+              "weighted_kde_contribution": 7.478384369611741e-05
+            },
+            "first_20_steps": {
+              "adversarial": 0.982951819896698,
+              "auxiliary": 2.0634156703948974,
+              "classical_regularizer": 18.805602860450744,
+              "coverage_regularizer": 0.9127270162105561,
+              "total": 3.0468079090118407,
+              "weighted_coverage_contribution": 6.430381001330884e-05,
+              "weighted_kde_contribution": 0.00037611205720901493
+            },
+            "last_20_steps": {
+              "adversarial": 1.1476423531770705,
+              "auxiliary": 0.057936541922390464,
+              "classical_regularizer": 1.6251418888568878,
+              "coverage_regularizer": 0.44978495985269545,
+              "total": 1.205643078684807,
+              "weighted_coverage_contribution": 3.168843048526492e-05,
+              "weighted_kde_contribution": 3.250283777713776e-05
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 43,
+      "variants": {
+        "quantum_kde_relational_coverage": {
+          "checkpoint_sha256": "c24c0791e4337bd35410573449bd1c60199c78fbdde52f93184486060cf62eae",
+          "common_checkpoint_kernel_geometry": {
+            "diagnostic_noise_seed": 94143,
+            "full_vs_controls": {
+              "quantum_kde_relational_dephased": {
+                "angle_gradient_cosine": 0.5146889686584473,
+                "coverage_loss_control_minus_full": -0.4356685280799866,
+                "shared_gradient_cosine": 0.9725071787834167,
+                "weighted_angle_norm_control_over_full": 0.036045928185109,
+                "weighted_shared_norm_control_over_full": 0.023890606328430944
+              },
+              "quantum_kde_relational_product": {
+                "angle_gradient_cosine": 0.7762967348098755,
+                "coverage_loss_control_minus_full": -0.03812628984451294,
+                "shared_gradient_cosine": 0.9450446367263794,
+                "weighted_angle_norm_control_over_full": 0.2968504851414922,
+                "weighted_shared_norm_control_over_full": 0.14332588918591732
+              }
+            },
+            "measurements": {
+              "quantum_kde_relational_coverage": {
+                "angle_gradient_norm": 0.088471420109272,
+                "angle_residual_rms": 2.7171201705932617,
+                "coverage_loss": 0.6760947108268738,
+                "coverage_weight": 0.0005662128371831583,
+                "shared_gradient_norm": 6.268703937530518,
+                "weighted_angle_gradient_norm": 5.0093653789694024e-05,
+                "weighted_shared_gradient_norm": 0.00354942064193039
+              },
+              "quantum_kde_relational_dephased": {
+                "angle_gradient_norm": 0.058681000024080276,
+                "angle_residual_rms": 2.7171201705932617,
+                "coverage_loss": 0.2404261827468872,
+                "coverage_weight": 3.077098628673762e-05,
+                "shared_gradient_norm": 2.7557716369628906,
+                "weighted_angle_gradient_norm": 1.8056722470330243e-06,
+                "weighted_shared_gradient_norm": 8.47978112503656e-05
+              },
+              "quantum_kde_relational_product": {
+                "angle_gradient_norm": 0.21106910705566406,
+                "angle_residual_rms": 2.7171201705932617,
+                "coverage_loss": 0.6379684209823608,
+                "coverage_weight": 7.045240128892456e-05,
+                "shared_gradient_norm": 7.220816612243652,
+                "weighted_angle_gradient_norm": 1.4870325429980621e-05,
+                "weighted_shared_gradient_norm": 0.0005087238695995226
+              }
+            },
+            "reference_angles_exactly_shared": true
+          },
+          "config": {
+            "angle_residual_fraction": 0.1,
+            "ansatz_reps": 1,
+            "batch_size": 64,
+            "beta1": 0.5,
+            "beta2": 0.999,
+            "checkpoint_every_steps": 0,
+            "coherence_gradient_ratio": 0.05,
+            "contrastive_angle_scale": 0.75,
+            "contrastive_quantum_temperature": 0.04,
+            "contrastive_reference_samples_per_class": 1024,
+            "coverage_temperature": 0.1,
+            "coverage_weight": 0.0005662128371831583,
+            "dataset_limit": null,
+            "dataset_root": "data",
+            "density_mmd_angle_scale": 0.25,
+            "device": "cpu",
+            "download_dataset": false,
+            "epochs": 1,
+            "gradient_diagnostics_every_steps": 0,
+            "image_channels": 1,
+            "ising_coupling": 1.0,
+            "ising_field": 0.1,
+            "kde_sigma_squared": 0.03125,
+            "kde_temperature": 0.75,
+            "latent_dim": 100,
+            "learning_rate_discriminator": 0.0002,
+            "learning_rate_generator": 0.0002,
+            "log_every_steps": 1,
+            "max_steps": 200,
+            "modular_angle_scale": 0.125,
+            "modular_depolarization": 0.01,
+            "num_classes": 10,
+            "num_qubits": 4,
+            "num_workers": 0,
+            "output_root": "runs/relational-development-seed-43",
+            "quantum_device": "cpu",
+            "quantum_mixture_weight": 0.05,
+            "rbf_sigma_squared": 1.213,
+            "real_label_smoothing": 0.9,
+            "reference_samples_per_class": 256,
+            "regularizer_gradient_ratio": null,
+            "regularizer_temperature": 1.0,
+            "regularizer_weight": 2e-05,
+            "run_name": "quantum_kde_relational_coverage-seed-43",
+            "seed": 43,
+            "variant": "quantum_kde_relational_coverage"
+          },
+          "evaluation_seconds": 8.243951499927789,
+          "matrix_sha256": "ec56fffe9f038ffa183567bb0b078930d0890c65770c666a5bba818a77cd490b",
+          "metrics": {
+            "class_conditional_feature_fid_64": 0.46209578537997303,
+            "conditional_accuracy": 0.781000018119812,
+            "diversity_ratio": 0.4954313897527643,
+            "feature_fid_64": 0.4072981338318493,
+            "feature_precision": 0.375,
+            "feature_recall": 0.004399999976158142
+          },
+          "post_run_mechanism": {
+            "angle_head_change_norm": 2.988477945327759,
+            "angle_head_changed_values": 29200,
+            "angle_head_max_abs_change": 0.04406558349728584,
+            "angle_parameter_changes": {
+              "0.bias": {
+                "change_norm": 0.21287336945533752,
+                "changed_values": 32,
+                "max_abs_change": 0.04406558349728584
+              },
+              "0.weight": {
+                "change_norm": 0.5337396264076233,
+                "changed_values": 288,
+                "max_abs_change": 0.04198550432920456
+              },
+              "2.bias": {
+                "change_norm": 0.2519550323486328,
+                "changed_values": 64,
+                "max_abs_change": 0.038291264325380325
+              },
+              "2.weight": {
+                "change_norm": 1.9932408332824707,
+                "changed_values": 18432,
+                "max_abs_change": 0.03184831887483597
+              },
+              "6.bias": {
+                "change_norm": 0.33477699756622314,
+                "changed_values": 128,
+                "max_abs_change": 0.03429945185780525
+              },
+              "6.weight": {
+                "change_norm": 1.7365483045578003,
+                "changed_values": 8192,
+                "max_abs_change": 0.031284816563129425
+              },
+              "8.bias": {
+                "change_norm": 0.07829920202493668,
+                "changed_values": 16,
+                "max_abs_change": 0.027961494401097298
+              },
+              "8.weight": {
+                "change_norm": 1.1960384845733643,
+                "changed_values": 2048,
+                "max_abs_change": 0.042978912591934204
+              }
+            },
+            "applied_angle_correction_rms": 0.27202367782592773,
+            "diagnostic_noise_seed": 94043,
+            "gradient_diagnostics": {
+              "angle_residual_rms": 2.7202367782592773,
+              "coverage_angle_head_norm": 0.08670259267091751,
+              "coverage_gan_cosine": 0.03255482390522957,
+              "coverage_kde_cosine": 0.8777426481246948,
+              "coverage_loss": 0.643424391746521,
+              "coverage_shared_norm": 6.4374213218688965,
+              "direct_coverage_shared_norm": 6.3747758865356445,
+              "direct_full_coverage_cosine": 0.9999986290931702,
+              "direct_to_full_coverage_norm_ratio": 0.9902685513032313,
+              "gan_objective_norm": 2.298574447631836,
+              "indirect_coverage_shared_norm": 0.06352870911359787,
+              "kde_gan_cosine": 0.25342077016830444,
+              "kde_loss": 2.4293906688690186,
+              "kde_norm": 89.5714111328125,
+              "weighted_coverage_to_gan_norm_ratio": 0.0015857439790797497,
+              "weighted_kde_to_gan_norm_ratio": 0.0007793648904876299
+            }
+          },
+          "run_directory": "runs/relational-development-seed-43/quantum_kde_relational_coverage-seed-43",
+          "source_dirty": true,
+          "source_revision": "22c72c51aa40b5d757e7a5b05074779f8767242d",
+          "training_seconds": 156.60072554205544,
+          "trajectory": {
+            "all_steps": {
+              "adversarial": 0.8283474935218692,
+              "auxiliary": 0.28850766728632155,
+              "classical_regularizer": 5.57593720138073,
+              "coverage_regularizer": 0.747647642493248,
+              "total": 1.1173900075256824,
+              "weighted_coverage_contribution": 0.00042332769286940154,
+              "weighted_kde_contribution": 0.00011151874402761461
+            },
+            "first_20_steps": {
+              "adversarial": 0.9131692916154861,
+              "auxiliary": 1.9884481728076935,
+              "classical_regularizer": 18.163583612442018,
+              "coverage_regularizer": 0.9278059870004653,
+              "total": 2.9025060653686525,
+              "weighted_coverage_contribution": 0.000525335660255054,
+              "weighted_kde_contribution": 0.0003632716722488404
+            },
+            "last_20_steps": {
+              "adversarial": 0.6597877237945795,
+              "auxiliary": 0.043735924270004035,
+              "classical_regularizer": 2.8405536711215973,
+              "coverage_regularizer": 0.6343603491783142,
+              "total": 0.7039396479725838,
+              "weighted_coverage_contribution": 0.00035918297310475226,
+              "weighted_kde_contribution": 5.681107342243195e-05
+            }
+          }
+        },
+        "quantum_kde_relational_dephased": {
+          "checkpoint_sha256": "2a2a67af93ecd9d9a46e7909aa9d961a959e485d98d65687c48cfd624005b8b5",
+          "config": {
+            "angle_residual_fraction": 0.1,
+            "ansatz_reps": 1,
+            "batch_size": 64,
+            "beta1": 0.5,
+            "beta2": 0.999,
+            "checkpoint_every_steps": 0,
+            "coherence_gradient_ratio": 0.05,
+            "contrastive_angle_scale": 0.75,
+            "contrastive_quantum_temperature": 0.04,
+            "contrastive_reference_samples_per_class": 1024,
+            "coverage_temperature": 0.1,
+            "coverage_weight": 3.077098628673762e-05,
+            "dataset_limit": null,
+            "dataset_root": "data",
+            "density_mmd_angle_scale": 0.25,
+            "device": "cpu",
+            "download_dataset": false,
+            "epochs": 10,
+            "gradient_diagnostics_every_steps": 0,
+            "image_channels": 1,
+            "ising_coupling": 1.0,
+            "ising_field": 0.1,
+            "kde_sigma_squared": 0.03125,
+            "kde_temperature": 0.75,
+            "latent_dim": 100,
+            "learning_rate_discriminator": 0.0002,
+            "learning_rate_generator": 0.0002,
+            "log_every_steps": 1,
+            "max_steps": 200,
+            "modular_angle_scale": 0.125,
+            "modular_depolarization": 0.01,
+            "num_classes": 10,
+            "num_qubits": 4,
+            "num_workers": 0,
+            "output_root": "runs/relational-gradient-matched-dephased-seed-43",
+            "quantum_device": "cpu",
+            "quantum_mixture_weight": 0.05,
+            "rbf_sigma_squared": 1.213,
+            "real_label_smoothing": 0.9,
+            "reference_samples_per_class": 256,
+            "regularizer_gradient_ratio": null,
+            "regularizer_temperature": 1.0,
+            "regularizer_weight": 2e-05,
+            "run_name": "quantum_kde_relational_dephased-seed-43",
+            "seed": 43,
+            "variant": "quantum_kde_relational_dephased"
+          },
+          "evaluation_seconds": 8.1031187500339,
+          "matrix_sha256": "38863b9c7f21eb32cb20999a2f69d12d0529063005802091014426a7d6305f0a",
+          "metrics": {
+            "class_conditional_feature_fid_64": 0.4608230689424995,
+            "conditional_accuracy": 0.8014000058174133,
+            "diversity_ratio": 0.48828364427480186,
+            "feature_fid_64": 0.40966661850174424,
+            "feature_precision": 0.4291999936103821,
+            "feature_recall": 0.0026000000070780516
+          },
+          "post_run_mechanism": {
+            "angle_head_change_norm": 0.13105572760105133,
+            "angle_head_changed_values": 28491,
+            "angle_head_max_abs_change": 0.04897098243236542,
+            "angle_parameter_changes": {
+              "0.bias": {
+                "change_norm": 0.003625845303758979,
+                "changed_values": 32,
+                "max_abs_change": 0.0015189402038231492
+              },
+              "0.weight": {
+                "change_norm": 0.006157951429486275,
+                "changed_values": 288,
+                "max_abs_change": 0.0009624063968658447
+              },
+              "2.bias": {
+                "change_norm": 0.011946898885071278,
+                "changed_values": 64,
+                "max_abs_change": 0.004941524006426334
+              },
+              "2.weight": {
+                "change_norm": 0.004259123001247644,
+                "changed_values": 18085,
+                "max_abs_change": 0.0003658691421151161
+              },
+              "6.bias": {
+                "change_norm": 0.050378087908029556,
+                "changed_values": 128,
+                "max_abs_change": 0.015026930719614029
+              },
+              "6.weight": {
+                "change_norm": 0.002929353155195713,
+                "changed_values": 7830,
+                "max_abs_change": 0.00038150977343320847
+              },
+              "8.bias": {
+                "change_norm": 0.10311387479305267,
+                "changed_values": 16,
+                "max_abs_change": 0.04897098243236542
+              },
+              "8.weight": {
+                "change_norm": 0.06151962652802467,
+                "changed_values": 2048,
+                "max_abs_change": 0.01219238992780447
+              }
+            },
+            "applied_angle_correction_rms": 0.008373291790485382,
+            "diagnostic_noise_seed": 94043,
+            "gradient_diagnostics": {
+              "angle_residual_rms": 0.08373291790485382,
+              "coverage_angle_head_norm": 0.02461092174053192,
+              "coverage_gan_cosine": 0.4512867331504822,
+              "coverage_kde_cosine": 0.8208102583885193,
+              "coverage_loss": 0.28308889269828796,
+              "coverage_shared_norm": 3.1552257537841797,
+              "direct_coverage_shared_norm": 3.1551718711853027,
+              "direct_full_coverage_cosine": 1.0000001192092896,
+              "direct_to_full_coverage_norm_ratio": 0.9999829227437015,
+              "gan_objective_norm": 1.9967976808547974,
+              "indirect_coverage_shared_norm": 6.365983426803723e-05,
+              "kde_gan_cosine": 0.3228331208229065,
+              "kde_loss": 2.6060853004455566,
+              "kde_norm": 91.04154968261719,
+              "weighted_coverage_to_gan_norm_ratio": 4.862255667268801e-05,
+              "weighted_kde_to_gan_norm_ratio": 0.0009118755551002418
+            }
+          },
+          "run_directory": "runs/relational-gradient-matched-dephased-seed-43/quantum_kde_relational_dephased-seed-43",
+          "source_dirty": true,
+          "source_revision": "fbe4028f069c895e44ee6def85b88b1861271e5e",
+          "training_seconds": 153.33834054099862,
+          "trajectory": {
+            "all_steps": {
+              "adversarial": 0.8546759666129947,
+              "auxiliary": 0.2897353913914412,
+              "classical_regularizer": 5.396695606708526,
+              "coverage_regularizer": 0.30329315170645715,
+              "total": 1.1445286222547293,
+              "weighted_coverage_contribution": 9.332629412020826e-06,
+              "weighted_kde_contribution": 0.00010793391213417055
+            },
+            "first_20_steps": {
+              "adversarial": 0.9124828487634659,
+              "auxiliary": 1.989350038766861,
+              "classical_regularizer": 18.172459840774536,
+              "coverage_regularizer": 0.4974696710705757,
+              "total": 2.902211630344391,
+              "weighted_coverage_contribution": 1.530763242658056e-05,
+              "weighted_kde_contribution": 0.0003634491968154907
+            },
+            "last_20_steps": {
+              "adversarial": 0.6453517090529204,
+              "auxiliary": 0.04433705415576696,
+              "classical_regularizer": 2.999734401702881,
+              "coverage_regularizer": 0.28064377009868624,
+              "total": 0.6897573865950107,
+              "weighted_coverage_contribution": 8.635685601165019e-06,
+              "weighted_kde_contribution": 5.999468803405762e-05
+            }
+          }
+        },
+        "quantum_kde_relational_product": {
+          "checkpoint_sha256": "8de130477c588d155e2db5120c53a1c68babdd5a834e16deafb3632da2a0605b",
+          "config": {
+            "angle_residual_fraction": 0.1,
+            "ansatz_reps": 1,
+            "batch_size": 64,
+            "beta1": 0.5,
+            "beta2": 0.999,
+            "checkpoint_every_steps": 0,
+            "coherence_gradient_ratio": 0.05,
+            "contrastive_angle_scale": 0.75,
+            "contrastive_quantum_temperature": 0.04,
+            "contrastive_reference_samples_per_class": 1024,
+            "coverage_temperature": 0.1,
+            "coverage_weight": 7.045240128892456e-05,
+            "dataset_limit": null,
+            "dataset_root": "data",
+            "density_mmd_angle_scale": 0.25,
+            "device": "cpu",
+            "download_dataset": false,
+            "epochs": 10,
+            "gradient_diagnostics_every_steps": 0,
+            "image_channels": 1,
+            "ising_coupling": 1.0,
+            "ising_field": 0.1,
+            "kde_sigma_squared": 0.03125,
+            "kde_temperature": 0.75,
+            "latent_dim": 100,
+            "learning_rate_discriminator": 0.0002,
+            "learning_rate_generator": 0.0002,
+            "log_every_steps": 1,
+            "max_steps": 200,
+            "modular_angle_scale": 0.125,
+            "modular_depolarization": 0.01,
+            "num_classes": 10,
+            "num_qubits": 4,
+            "num_workers": 0,
+            "output_root": "runs/relational-gradient-matched-product-seed-43",
+            "quantum_device": "cpu",
+            "quantum_mixture_weight": 0.05,
+            "rbf_sigma_squared": 1.213,
+            "real_label_smoothing": 0.9,
+            "reference_samples_per_class": 256,
+            "regularizer_gradient_ratio": null,
+            "regularizer_temperature": 1.0,
+            "regularizer_weight": 2e-05,
+            "run_name": "quantum_kde_relational_product-seed-43",
+            "seed": 43,
+            "variant": "quantum_kde_relational_product"
+          },
+          "evaluation_seconds": 8.30132745904848,
+          "matrix_sha256": "5aa860968d7adde231d91f19bbcf7dab2e7e0eeb6671c7a798183ab7877cbb1f",
+          "metrics": {
+            "class_conditional_feature_fid_64": 0.4585443815212388,
+            "conditional_accuracy": 0.7663999795913696,
+            "diversity_ratio": 0.5043498236191387,
+            "feature_fid_64": 0.40927744477042927,
+            "feature_precision": 0.423799991607666,
+            "feature_recall": 0.002199999988079071
+          },
+          "post_run_mechanism": {
+            "angle_head_change_norm": 2.1876304149627686,
+            "angle_head_changed_values": 29200,
+            "angle_head_max_abs_change": 0.05773158371448517,
+            "angle_parameter_changes": {
+              "0.bias": {
+                "change_norm": 0.20418396592140198,
+                "changed_values": 32,
+                "max_abs_change": 0.05773158371448517
+              },
+              "0.weight": {
+                "change_norm": 0.5016747713088989,
+                "changed_values": 288,
+                "max_abs_change": 0.05182232707738876
+              },
+              "2.bias": {
+                "change_norm": 0.2686178684234619,
+                "changed_values": 64,
+                "max_abs_change": 0.055143244564533234
+              },
+              "2.weight": {
+                "change_norm": 1.2731014490127563,
+                "changed_values": 18432,
+                "max_abs_change": 0.03507554531097412
+              },
+              "6.bias": {
+                "change_norm": 0.39797624945640564,
+                "changed_values": 128,
+                "max_abs_change": 0.05289334058761597
+              },
+              "6.weight": {
+                "change_norm": 1.1618692874908447,
+                "changed_values": 8192,
+                "max_abs_change": 0.03561266139149666
+              },
+              "8.bias": {
+                "change_norm": 0.1330668032169342,
+                "changed_values": 16,
+                "max_abs_change": 0.043388184159994125
+              },
+              "8.weight": {
+                "change_norm": 1.1284408569335938,
+                "changed_values": 2048,
+                "max_abs_change": 0.05706961452960968
+              }
+            },
+            "applied_angle_correction_rms": 0.27649052143096925,
+            "diagnostic_noise_seed": 94043,
+            "gradient_diagnostics": {
+              "angle_residual_rms": 2.7649052143096924,
+              "coverage_angle_head_norm": 0.05370650812983513,
+              "coverage_gan_cosine": 0.22120791673660278,
+              "coverage_kde_cosine": 0.9399093985557556,
+              "coverage_loss": 0.5355857610702515,
+              "coverage_shared_norm": 5.358951091766357,
+              "direct_coverage_shared_norm": 5.2528076171875,
+              "direct_full_coverage_cosine": 0.9999744296073914,
+              "direct_to_full_coverage_norm_ratio": 0.9801932369299023,
+              "gan_objective_norm": 2.6779212951660156,
+              "indirect_coverage_shared_norm": 0.11272124201059341,
+              "kde_gan_cosine": 0.267775297164917,
+              "kde_loss": 2.601938247680664,
+              "kde_norm": 79.27570343017578,
+              "weighted_coverage_to_gan_norm_ratio": 0.00014098658294639605,
+              "weighted_kde_to_gan_norm_ratio": 0.0005920689571667278
+            }
+          },
+          "run_directory": "runs/relational-gradient-matched-product-seed-43/quantum_kde_relational_product-seed-43",
+          "source_dirty": true,
+          "source_revision": "fbe4028f069c895e44ee6def85b88b1861271e5e",
+          "training_seconds": 153.50046637502965,
+          "trajectory": {
+            "all_steps": {
+              "adversarial": 0.869196823388338,
+              "auxiliary": 0.29022064794786273,
+              "classical_regularizer": 5.414495881795883,
+              "coverage_regularizer": 0.7725633957982063,
+              "total": 1.1595801899582148,
+              "weighted_coverage_contribution": 5.4428946381909486e-05,
+              "weighted_kde_contribution": 0.00010828991763591767
+            },
+            "first_20_steps": {
+              "adversarial": 0.9126721948385239,
+              "auxiliary": 1.988825273513794,
+              "classical_regularizer": 18.247117137908937,
+              "coverage_regularizer": 0.9231360882520676,
+              "total": 2.9019274592399595,
+              "weighted_coverage_contribution": 6.503715413382274e-05,
+              "weighted_kde_contribution": 0.00036494234275817876
+            },
+            "last_20_steps": {
+              "adversarial": 0.7443720601499081,
+              "auxiliary": 0.04824869614094496,
+              "classical_regularizer": 2.6801151990890504,
+              "coverage_regularizer": 0.5306668013334275,
+              "total": 0.79271175339818,
+              "weighted_coverage_contribution": 3.7386750438252634e-05,
+              "weighted_kde_contribution": 5.360230398178101e-05
+            }
+          }
+        }
+      }
+    }
+  ],
+  "same_coefficient_comparison": {
+    "control_mean_shift_after_gradient_matching": {
+      "quantum_kde_relational_dephased": {
+        "class_conditional_feature_fid_64": 0.02666085248715061,
+        "conditional_accuracy": 0.06610000133514404,
+        "diversity_ratio": -0.042990840530018004,
+        "feature_fid_64": 0.0332175184613015,
+        "feature_precision": -0.011600002646446228,
+        "feature_recall": -0.00010000087786465883
+      },
+      "quantum_kde_relational_product": {
+        "class_conditional_feature_fid_64": -0.004619102216589843,
+        "conditional_accuracy": -0.02340000867843628,
+        "diversity_ratio": 0.008928509566352494,
+        "feature_fid_64": -0.002026842861296785,
+        "feature_precision": 0.016699984669685364,
+        "feature_recall": 0.0015999989118427038
+      }
+    },
+    "path": "docs/relational_coverage_ablation_results.json",
+    "sha256": "98b22f6d5337f520ca0467e5b08c8c55cc6259d4d6ac0edbdcb784e5aeae656b"
+  },
+  "schema_version": 1,
+  "seed_consistency": {
+    "quantum_kde_relational_dephased": {
+      "full_accuracy_not_lower_on_both_seeds": false,
+      "full_class_fid_lower_on_both_seeds": false,
+      "full_diversity_higher_on_both_seeds": true
+    },
+    "quantum_kde_relational_product": {
+      "full_accuracy_not_lower_on_both_seeds": false,
+      "full_class_fid_lower_on_both_seeds": false,
+      "full_diversity_higher_on_both_seeds": false
+    }
+  },
+  "status": "post_hoc_development_only"
+}

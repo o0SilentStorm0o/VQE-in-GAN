@@ -5,6 +5,10 @@
 > optimizer-isolation tests. The original mechanism remains a negative result. A frozen
 > class-contrastive candidate improved mean conditional accuracy by 0.77 percentage points over
 > its classical control, but worsened mean class-FID and therefore failed its held-out stop rule.
+> A later trainable relational-coverage candidate improved development-set distribution metrics,
+> but failed its circuit-specific controls: its apparent advantage traded away class accuracy and
+> an initialization-only gradient match did not persist during training. No held-out seeds were
+> used for either failed candidate.
 > The complete evidence and stopping rules are recorded in
 > [`docs/quantum_utility_audit.md`](docs/quantum_utility_audit.md).
 
@@ -19,6 +23,10 @@ The separate frozen contrastive-reference experiment is specified in
 [`docs/contrastive_reference_protocol.md`](docs/contrastive_reference_protocol.md).
 Its post-hoc causal diagnosis is in
 [`docs/contrastive_failure_diagnosis.md`](docs/contrastive_failure_diagnosis.md).
+The trainable relational mechanism, circuit controls, and gradient-matched diagnosis are recorded
+in [`docs/trainable_relational_coverage_protocol.md`](docs/trainable_relational_coverage_protocol.md)
+and
+[`docs/relational_gradient_matched_diagnostic_protocol.md`](docs/relational_gradient_matched_diagnostic_protocol.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
