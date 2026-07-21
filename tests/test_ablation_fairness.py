@@ -118,6 +118,8 @@ def test_phase_a_freezes_an_exactly_zero_angle_head() -> None:
     config = ExperimentConfig(
         run_name="phase-a-full",
         variant=ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+        device="cpu",
+        quantum_device="cpu",
         max_steps=1,
         regularizer_weight=2e-5,
         coverage_weight=(ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE.default_coverage_weight),

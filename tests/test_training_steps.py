@@ -363,6 +363,8 @@ def test_relational_reference_budget_matches_shared_and_angle_optimizer_paths() 
     assert replay.coverage_angle_update_relative_error <= 1e-4
     assert replay.coverage_shared_adam_ratio_relative_error <= 1e-4
     assert replay.coverage_shared_adam_proposal_relative_error <= 1e-5
+    assert 1 <= replay.coverage_shared_adam_correction_iterations <= 8
+    assert 1 <= replay.coverage_angle_update_correction_iterations <= 8
     assert (
         replay.coverage_shared_adam_ratio_relative_error
         < replay.coverage_shared_adam_uncorrected_relative_error

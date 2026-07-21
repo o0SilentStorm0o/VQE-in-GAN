@@ -282,6 +282,8 @@ class ExperimentConfig:
         budget_requested = self.coverage_budget_mode is not CoverageBudgetMode.FIXED
         if budget_requested and not self.variant.uses_relational_coverage:
             raise ValueError("coverage budget modes are only valid for relational variants")
+        if budget_requested and (self.device != "cpu" or self.quantum_device != "cpu"):
+            raise ValueError("reference-budget runs require deterministic CPU execution")
         if budget_requested and self.coverage_weight != (
             ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE.default_coverage_weight
         ):

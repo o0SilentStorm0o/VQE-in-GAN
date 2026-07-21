@@ -83,6 +83,7 @@ class GeneratorStepMetrics:
     coverage_shared_adam_uncorrected_relative_error: float | None = None
     coverage_shared_adam_update_multiplier: float | None = None
     coverage_shared_adam_proposal_relative_error: float | None = None
+    coverage_shared_adam_correction_iterations: int | None = None
     coverage_angle_gradient_target_norm: float | None = None
     coverage_angle_gradient_achieved_norm: float | None = None
     coverage_angle_gradient_relative_error: float | None = None
@@ -90,6 +91,7 @@ class GeneratorStepMetrics:
     coverage_angle_update_achieved_norm: float | None = None
     coverage_angle_update_relative_error: float | None = None
     coverage_angle_update_multiplier: float | None = None
+    coverage_angle_update_correction_iterations: int | None = None
 
 
 def discriminator_step(
@@ -769,49 +771,69 @@ def relational_coverage_generator_step(
             adam_target_ratio,
         )
         adam_update_multiplier = (
-            adam_target_ratio * adam_anchor_update_norm / uncorrected_adam_auxiliary_norm
-        ).detach()
+            (adam_target_ratio * adam_anchor_update_norm / uncorrected_adam_auxiliary_norm)
+            .detach()
+            .to(torch.float64)
+        )
+        adam_correction_iterations = 0
         if budget_target is not None:
-            with torch.no_grad():
-                for parameter, before, anchor_update, auxiliary_update in zip(
+            for iteration in range(1, 9):
+                _write_scaled_parameter_displacement(
                     shared_parameters,
                     shared_before,
                     adam_anchor_updates,
                     uncorrected_adam_auxiliary_updates,
-                    strict=True,
-                ):
-                    parameter.copy_(
-                        before + anchor_update + adam_update_multiplier * auxiliary_update
+                    adam_update_multiplier,
+                )
+                achieved_shared_updates = _parameter_displacements(
+                    shared_parameters,
+                    shared_before,
+                )
+                achieved_adam_auxiliary_updates = tuple(
+                    total_update - anchor_update
+                    for total_update, anchor_update in zip(
+                        achieved_shared_updates,
+                        adam_anchor_updates,
+                        strict=True,
                     )
-        achieved_shared_updates = tuple(
-            parameter.detach() - before
-            for parameter, before in zip(shared_parameters, shared_before, strict=True)
-        )
-        achieved_adam_auxiliary_updates = tuple(
-            total_update - anchor_update
-            for total_update, anchor_update in zip(
-                achieved_shared_updates,
-                adam_anchor_updates,
-                strict=True,
+                )
+                adam_auxiliary_ratio = (
+                    _tensor_gradient_norm(achieved_adam_auxiliary_updates) / adam_anchor_update_norm
+                )
+                adam_ratio_relative_error = _relative_error(
+                    adam_auxiliary_ratio,
+                    adam_target_ratio,
+                )
+                adam_correction_iterations = iteration
+                if adam_ratio_relative_error <= 1e-5:
+                    break
+                if adam_auxiliary_ratio.item() <= epsilon:
+                    raise RuntimeError("realized shared Adam correction is too small")
+                adam_update_multiplier = (
+                    adam_update_multiplier
+                    * adam_target_ratio.to(torch.float64)
+                    / adam_auxiliary_ratio.to(torch.float64)
+                )
+        else:
+            achieved_shared_updates = ordinary_shared_updates
+            achieved_adam_auxiliary_updates = uncorrected_adam_auxiliary_updates
+            adam_auxiliary_ratio = uncorrected_adam_auxiliary_ratio
+            adam_ratio_relative_error = _relative_error(
+                adam_auxiliary_ratio,
+                adam_target_ratio,
             )
-        )
-        adam_auxiliary_ratio = (
-            _tensor_gradient_norm(achieved_adam_auxiliary_updates) / adam_anchor_update_norm
-        )
-        adam_ratio_relative_error = _relative_error(
-            adam_auxiliary_ratio,
-            adam_target_ratio,
-        )
         shared_update_norm = _parameter_displacement_norm(shared_parameters, shared_before)
         angle_update_target_norm = None
         angle_update_achieved_norm = None
         angle_update_relative_error = None
         angle_update_multiplier = None
+        angle_update_correction_iterations = None
         if match_angle_head_budget:
-            proposed_angle_update_norm = _parameter_displacement_norm(
+            ordinary_angle_updates = _parameter_displacements(
                 angle_parameters,
                 angle_before,
             )
+            proposed_angle_update_norm = _tensor_gradient_norm(ordinary_angle_updates)
             if (
                 not torch.isfinite(proposed_angle_update_norm)
                 or proposed_angle_update_norm.item() <= epsilon
@@ -825,15 +847,40 @@ def relational_coverage_generator_step(
                 target_angle_update = proposed_angle_update_norm.new_tensor(
                     budget_target.angle_update_norm
                 )
-            multiplier = (target_angle_update / proposed_angle_update_norm).detach()
-            if budget_target is not None:
-                with torch.no_grad():
-                    for parameter, before in zip(angle_parameters, angle_before, strict=True):
-                        parameter.copy_(before + multiplier * (parameter - before))
-            achieved_angle_update = _parameter_displacement_norm(
-                angle_parameters,
-                angle_before,
+            multiplier = (
+                (target_angle_update / proposed_angle_update_norm).detach().to(torch.float64)
             )
+            angle_update_correction_iterations = 0
+            if budget_target is not None:
+                zero_updates = tuple(torch.zeros_like(update) for update in ordinary_angle_updates)
+                for iteration in range(1, 9):
+                    _write_scaled_parameter_displacement(
+                        angle_parameters,
+                        angle_before,
+                        zero_updates,
+                        ordinary_angle_updates,
+                        multiplier,
+                    )
+                    achieved_angle_update = _parameter_displacement_norm(
+                        angle_parameters,
+                        angle_before,
+                    )
+                    angle_update_relative_error = _relative_error(
+                        achieved_angle_update,
+                        target_angle_update,
+                    )
+                    angle_update_correction_iterations = iteration
+                    if angle_update_relative_error <= 1e-5:
+                        break
+                    if achieved_angle_update.item() <= epsilon:
+                        raise RuntimeError("realized angle-head correction is too small")
+                    multiplier = (
+                        multiplier
+                        * target_angle_update.to(torch.float64)
+                        / achieved_angle_update.to(torch.float64)
+                    )
+            else:
+                achieved_angle_update = proposed_angle_update_norm
             angle_update_target_norm = target_angle_update.item()
             angle_update_achieved_norm = achieved_angle_update.item()
             angle_update_relative_error = _relative_error(
@@ -885,6 +932,7 @@ def relational_coverage_generator_step(
         coverage_shared_adam_uncorrected_relative_error=(adam_uncorrected_relative_error),
         coverage_shared_adam_update_multiplier=adam_update_multiplier.item(),
         coverage_shared_adam_proposal_relative_error=(adam_proposal_relative_error.item()),
+        coverage_shared_adam_correction_iterations=adam_correction_iterations,
         coverage_angle_gradient_target_norm=angle_gradient_target_norm,
         coverage_angle_gradient_achieved_norm=angle_gradient_achieved_norm,
         coverage_angle_gradient_relative_error=angle_gradient_relative_error,
@@ -892,6 +940,7 @@ def relational_coverage_generator_step(
         coverage_angle_update_achieved_norm=angle_update_achieved_norm,
         coverage_angle_update_relative_error=angle_update_relative_error,
         coverage_angle_update_multiplier=angle_update_multiplier,
+        coverage_angle_update_correction_iterations=(angle_update_correction_iterations),
     )
 
 
@@ -908,11 +957,43 @@ def _parameter_displacement_norm(
     parameters: tuple[torch.nn.Parameter, ...],
     before: tuple[Tensor, ...],
 ) -> Tensor:
-    return _tensor_gradient_norm(
-        tuple(
-            parameter.detach() - value for parameter, value in zip(parameters, before, strict=True)
-        )
+    return _tensor_gradient_norm(_parameter_displacements(parameters, before))
+
+
+def _parameter_displacements(
+    parameters: tuple[torch.nn.Parameter, ...],
+    before: tuple[Tensor, ...],
+) -> tuple[Tensor, ...]:
+    return tuple(
+        parameter.detach() - value for parameter, value in zip(parameters, before, strict=True)
     )
+
+
+def _write_scaled_parameter_displacement(
+    parameters: tuple[torch.nn.Parameter, ...],
+    before: tuple[Tensor, ...],
+    base_updates: tuple[Tensor, ...],
+    auxiliary_updates: tuple[Tensor, ...],
+    multiplier: Tensor,
+) -> None:
+    """Apply one scalar displacement in float64 before the final parameter cast."""
+
+    if not torch.isfinite(multiplier):
+        raise RuntimeError("parameter displacement multiplier is non-finite")
+    with torch.no_grad():
+        for parameter, value, base, auxiliary in zip(
+            parameters,
+            before,
+            base_updates,
+            auxiliary_updates,
+            strict=True,
+        ):
+            corrected = (
+                value.to(torch.float64)
+                + base.to(torch.float64)
+                + multiplier * auxiliary.to(torch.float64)
+            )
+            parameter.copy_(corrected.to(parameter.dtype))
 
 
 def _adam_proposed_updates(

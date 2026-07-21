@@ -186,6 +186,9 @@ def _read_run(
     adam_multipliers = [
         float(record["generator"]["coverage_shared_adam_update_multiplier"]) for record in records
     ]
+    adam_correction_iterations = [
+        int(record["generator"]["coverage_shared_adam_correction_iterations"]) for record in records
+    ]
     angle_gradient_errors = [
         float(record["generator"]["coverage_angle_gradient_relative_error"])
         for record in records
@@ -195,6 +198,11 @@ def _read_run(
         float(record["generator"]["coverage_angle_update_relative_error"])
         for record in records
         if record["generator"]["coverage_angle_update_relative_error"] is not None
+    ]
+    angle_correction_iterations = [
+        int(record["generator"]["coverage_angle_update_correction_iterations"])
+        for record in records
+        if record["generator"]["coverage_angle_update_correction_iterations"] is not None
     ]
     technical = {
         "frozen_config": frozen_config,
@@ -223,6 +231,18 @@ def _read_run(
         "uncorrected_adam_error_maximum": max(uncorrected_adam_errors),
         "adam_update_multiplier_minimum": min(adam_multipliers),
         "adam_update_multiplier_maximum": max(adam_multipliers),
+        "adam_correction_iterations_maximum": max(adam_correction_iterations),
+        "adam_steps_requiring_refinement": sum(
+            iterations > 1 for iterations in adam_correction_iterations
+        ),
+        "angle_correction_iterations_maximum": (
+            max(angle_correction_iterations) if angle_correction_iterations else None
+        ),
+        "angle_steps_requiring_refinement": (
+            sum(iterations > 1 for iterations in angle_correction_iterations)
+            if angle_correction_iterations
+            else None
+        ),
     }
     technical["all_passed"] = all(
         (
