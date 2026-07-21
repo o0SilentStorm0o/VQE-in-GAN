@@ -17,6 +17,8 @@ The current exploratory pilot and draft ablation protocol are documented in
 [`docs/ablation_protocol_draft.md`](docs/ablation_protocol_draft.md).
 The separate frozen contrastive-reference experiment is specified in
 [`docs/contrastive_reference_protocol.md`](docs/contrastive_reference_protocol.md).
+Its post-hoc causal diagnosis is in
+[`docs/contrastive_failure_diagnosis.md`](docs/contrastive_failure_diagnosis.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)

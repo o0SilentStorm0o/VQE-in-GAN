@@ -297,6 +297,28 @@ therefore fails Stage 1, and its product/dephased controls and later seeds are n
 metrics and artifact digests are in
 [contrastive_stage1_results.json](contrastive_stage1_results.json).
 
+### Why Candidate 4 failed
+
+The fixed post-hoc diagnostic identifies a structural and optimization-level explanation:
+
+- the contrastive regularizer has zero trainable parameters and bypasses all 29,200 parameters of
+  the generator `angle_head`; those values remain exactly at initialization in every Stage 1
+  checkpoint;
+- the all-class cross-entropy optimizes relative class separation, not absolute target density,
+  support coverage, or within-class diversity;
+- comparing `CE(KDE)` with `CE(0.95*KDE + 0.05*quantum)` also changes the classical logit scale;
+  the first hybrid-minus-KDE gradient has cosine 0.9992 and 0.9997 with this scale-only effect;
+- the isolated quantum addition is only 0.015% and 0.021% of the GAN gradient on the two actual
+  first batches, while the scale effect is 0.365% and 0.659%;
+- the first paired update difference is amplified approximately 450-fold and 537-fold by the GAN
+  feedback loop, and its final distributional sign reverses between seeds.
+
+On seed 101, accuracy improves for six classes while class-FID and diversity worsen for all ten.
+On seed 202, class-FID improves for six classes and diversity for eight while accuracy gains and
+losses cancel. The full derivation and per-class tables are in
+[contrastive_failure_diagnosis.md](contrastive_failure_diagnosis.md), with exact values in
+[contrastive_failure_diagnostic_results.json](contrastive_failure_diagnostic_results.json).
+
 ### Hardware interpretation
 
 The improved Hamiltonians are dense. Aggregated squared Pauli-coefficient mass is 4.2% at weight
@@ -317,9 +339,9 @@ The experiments support four statements:
    trajectories, including a held-out screening seed.
 2. The original target-only modular loss is not robust and is explained largely by prototype
    fidelity, reference stability, and gradient scaling.
-3. A centered class-contrastive score exposes a small development-set contribution that disappears
-   under product and dephased removals, but it fails the frozen held-out class-FID gate against the
-   strong log-KDE control.
+3. The centered class-contrastive candidate fails the frozen held-out class-FID gate, contains no
+   trainable circuit parameters, and confounds its nominal quantum addition with a change in the
+   classical KDE logit scale. Its paired effect cannot be attributed to the quantum score.
 4. With four noiselessly simulated qubits, every tested quantum layer is a small differentiable
    classical computation. These experiments can study inductive bias, but they cannot establish a
    computational quantum advantage.

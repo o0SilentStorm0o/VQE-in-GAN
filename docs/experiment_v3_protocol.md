@@ -75,4 +75,7 @@ control. It passed product and dephased development checks on seed 42 and improv
 control on development seeds 42 and 43. On the frozen seeds 101 and 202 it improved mean
 conditional accuracy by 0.77 percentage points but worsened mean class-FID by 0.00585. It therefore
 failed the preregistered Stage 1 gate in `contrastive_reference_protocol.md`; later seeds and causal
-ablations are not authorized for this candidate.
+ablations are not authorized for this candidate. The completed post-hoc diagnosis shows that the
+branch is a fixed parameter-free feature map, its loss is class-relative rather than
+distribution-matching, and the frozen comparison is dominated initially by a simultaneous change
+in KDE logit scale. See `contrastive_failure_diagnosis.md`.

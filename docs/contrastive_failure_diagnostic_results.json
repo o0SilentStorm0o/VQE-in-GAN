@@ -1,0 +1,2028 @@
+{
+  "analysis": "post_hoc_contrastive_failure_diagnostic",
+  "classifier": "/Users/david/Projects/VQE-in-GAN/mnist_classifier.pth",
+  "classifier_sha256": "e9dcb79e44703f86afe208bca8f548fcc715dcc0c464a19e591b5a6fef0eefb8",
+  "cross_seed_summary": {
+    "all_angle_heads_unchanged": true,
+    "final_to_first_difference_amplification": {
+      "101": 449.86249447265936,
+      "202": 536.8868990740782
+    },
+    "mean_first_update_quantum_residual_fraction": 0.21099015325307846,
+    "mean_first_update_scaling_alignment": 0.9776566624641418,
+    "mean_initial_quantum_addition_over_total_delta": 0.0364043265581131,
+    "mean_initial_scale_effect_over_total_delta": 1.0067282319068909,
+    "mean_initial_weighted_quantum_addition_to_gan": 0.00017835765174822882,
+    "per_seed_outcome": {
+      "101": {
+        "class_fid": 0.019128257143287662,
+        "conditional_accuracy": 0.016599997878074646,
+        "fid_centroid_component": 0.01695287972688675,
+        "fid_covariance_component": 0.0021753774164009142,
+        "intra_class_diversity": -0.009440061450004578,
+        "target_nll": -0.16349000930786134,
+        "target_probability": 0.012245365977287292
+      },
+      "202": {
+        "class_fid": -0.0074193042364543715,
+        "conditional_accuracy": -0.00119999498128891,
+        "fid_centroid_component": -0.006270405650138855,
+        "fid_covariance_component": -0.0011488985863155165,
+        "intra_class_diversity": 0.0089359313249588,
+        "target_nll": -0.042656511068344116,
+        "target_probability": 0.0026141569018363954
+      }
+    },
+    "seeds": [
+      101,
+      202
+    ]
+  },
+  "device": "cpu",
+  "evaluation_samples": 5000,
+  "evaluation_seed": 91001,
+  "gradient_samples": 100,
+  "gradient_seed": 123456,
+  "interpretation": "mechanistic_only_not_confirmatory",
+  "pairs": [
+    {
+      "architecture": {
+        "final_hybrid_minus_classical": {
+          "l2": 3.3185765743255615,
+          "parameter_cosine": 0.9957585334777832,
+          "relative_to_classical_parameter_norm": 0.09359017759561539
+        },
+        "final_parameter_change_from_initialization": {
+          "classical": {
+            "angle_head": {
+              "changed_values": 0,
+              "l2": 0.0,
+              "max_absolute": 0.0,
+              "values": 29200
+            },
+            "image_decoder": {
+              "changed_values": 370305,
+              "l2": 2.95802640914917,
+              "max_absolute": 0.04038317874073982,
+              "values": 370305
+            },
+            "input_projection": {
+              "changed_values": 1392384,
+              "l2": 5.13221549987793,
+              "max_absolute": 0.03919697925448418,
+              "values": 1392384
+            },
+            "label_embedding": {
+              "changed_values": 100,
+              "l2": 0.20199060440063477,
+              "max_absolute": 0.04030483961105347,
+              "values": 100
+            }
+          },
+          "hybrid": {
+            "angle_head": {
+              "changed_values": 0,
+              "l2": 0.0,
+              "max_absolute": 0.0,
+              "values": 29200
+            },
+            "image_decoder": {
+              "changed_values": 370305,
+              "l2": 2.946765899658203,
+              "max_absolute": 0.03914971649646759,
+              "values": 370305
+            },
+            "input_projection": {
+              "changed_values": 1392383,
+              "l2": 5.12499475479126,
+              "max_absolute": 0.03790486976504326,
+              "values": 1392384
+            },
+            "label_embedding": {
+              "changed_values": 100,
+              "l2": 0.20352444052696228,
+              "max_absolute": 0.040517836809158325,
+              "values": 100
+            }
+          }
+        },
+        "generator_angle_head_parameters": 29200,
+        "generator_image_path_parameters": 1762789,
+        "hybrid_gradient_reaches_angle_head": false,
+        "hybrid_gradient_reaches_image_path": true,
+        "regularizer_trainable_parameters": 0
+      },
+      "checkpoints": {
+        "classical": {
+          "path": "/private/tmp/contrastive-heldout-cpu-seed101/classical_log_kde_contrastive-seed-101/checkpoint-final.pt",
+          "sha256": "0899f2b8f06ac29d589343663672461614b274d7ef71403d435bf1fff3a673eb"
+        },
+        "hybrid": {
+          "path": "/private/tmp/contrastive-heldout-cpu-seed101/hybrid_modular_kde_contrastive-seed-101/checkpoint-final.pt",
+          "sha256": "c141c40a480322d34ea41de1b7bdb0256bc9d5db72641b72fa87a513ea4624f8"
+        }
+      },
+      "evaluation_verification": {
+        "classical": {
+          "available": true,
+          "differences": {
+            "class_conditional_feature_fid_64": 0.0,
+            "conditional_accuracy": -1.4901161193847656e-08,
+            "generated_intra_class_diversity": -2.980232227667301e-09
+          },
+          "maximum_absolute_difference": 1.4901161193847656e-08,
+          "path": "/private/tmp/contrastive-heldout-cpu-seed101/classical_log_kde_contrastive-seed-101/evaluation.json",
+          "recomputed": {
+            "class_conditional_feature_fid_64": 0.3471012495494825,
+            "conditional_accuracy": 0.719200000166893,
+            "generated_intra_class_diversity": 0.37703814804553987
+          },
+          "stored": {
+            "class_conditional_feature_fid_64": 0.3471012495494825,
+            "conditional_accuracy": 0.7192000150680542,
+            "generated_intra_class_diversity": 0.3770381510257721
+          }
+        },
+        "hybrid": {
+          "available": true,
+          "differences": {
+            "class_conditional_feature_fid_64": 0.0,
+            "conditional_accuracy": -2.9802322387695312e-08,
+            "generated_intra_class_diversity": 0.0
+          },
+          "maximum_absolute_difference": 2.9802322387695312e-08,
+          "path": "/private/tmp/contrastive-heldout-cpu-seed101/hybrid_modular_kde_contrastive-seed-101/evaluation.json",
+          "recomputed": {
+            "class_conditional_feature_fid_64": 0.3662295066927702,
+            "conditional_accuracy": 0.7357999980449677,
+            "generated_intra_class_diversity": 0.3675980865955353
+          },
+          "stored": {
+            "class_conditional_feature_fid_64": 0.3662295066927702,
+            "conditional_accuracy": 0.73580002784729,
+            "generated_intra_class_diversity": 0.3675980865955353
+          }
+        }
+      },
+      "first_adam_update": {
+        "difference_norms": {
+          "hybrid_minus_kde": 0.0073768687434494495,
+          "hybrid_minus_scaled_kde": 0.0016263501020148396,
+          "scaled_kde_minus_kde": 0.007381280418485403
+        },
+        "losses": {
+          "hybrid": {
+            "gan": 2.9951963424682617,
+            "regularizer": 53.480587005615234,
+            "total": 2.9962658882141113
+          },
+          "kde": {
+            "gan": 2.9951963424682617,
+            "regularizer": 56.1972770690918,
+            "total": 2.9963202476501465
+          },
+          "scaled_kde": {
+            "gan": 2.9951963424682617,
+            "regularizer": 53.38741683959961,
+            "total": 2.9962639808654785
+          }
+        },
+        "scaling_explanation": {
+          "hybrid_kde_difference_vs_scaling_difference_cosine": 0.9757270216941833,
+          "quantum_residual_over_hybrid_kde_difference": 0.22046618163585663,
+          "scaling_difference_over_hybrid_kde_difference": 1.0005980730056763
+        },
+        "update_norms": {
+          "hybrid": 0.264926940202713,
+          "kde": 0.26492878794670105,
+          "scaled_kde": 0.26492738723754883
+        }
+      },
+      "global_step": 200,
+      "gradients": {
+        "actual_first_generator_batch": {
+          "batch_size": 64,
+          "classes_present": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "cosines": {
+            "quantum_addition": {
+              "adversarial": -0.207543283700943,
+              "auxiliary": -0.017796242609620094,
+              "centroid_fidelity_proxy": 0.1669808030128479,
+              "diversity_promotion_proxy": 0.13959312438964844,
+              "gan": -0.18617568910121918,
+              "independent_semantic": -0.1354435384273529,
+              "kde": -0.1410999596118927,
+              "standalone_quantum": 0.4310414493083954
+            },
+            "scale_effect": {
+              "adversarial": -0.9000566005706787,
+              "auxiliary": -0.047040700912475586,
+              "centroid_fidelity_proxy": -0.14400987327098846,
+              "diversity_promotion_proxy": 0.02062871865928173,
+              "gan": -0.7924588918685913,
+              "independent_semantic": -0.1842532604932785,
+              "kde": -1.0,
+              "standalone_quantum": -0.6681029200553894
+            },
+            "total_delta": {
+              "adversarial": -0.9026051163673401,
+              "auxiliary": -0.047456949949264526,
+              "centroid_fidelity_proxy": -0.13626378774642944,
+              "diversity_promotion_proxy": 0.02617916278541088,
+              "gan": -0.7948431968688965,
+              "independent_semantic": -0.18856123089790344,
+              "kde": -0.9991865158081055,
+              "standalone_quantum": -0.6461629867553711
+            }
+          },
+          "decomposition": {
+            "identity_residual_norm": 3.4194560516453976e-09,
+            "quantum_addition_over_total_delta": 0.04073106124997139,
+            "scale_effect_over_total_delta": 0.9934395551681519,
+            "scale_effect_quantum_addition_cosine": 0.14109967648983002,
+            "standalone_quantum_over_kde": 0.03990345448255539,
+            "total_delta_quantum_addition_cosine": 0.1809050440788269,
+            "total_delta_scale_effect_cosine": 0.999186635017395
+          },
+          "generator_mode": "train",
+          "gradient_norms": {
+            "adversarial": 0.10542453080415726,
+            "auxiliary": 0.061127420514822006,
+            "centroid_fidelity_proxy": 1.8032430410385132,
+            "diversity_promotion_proxy": 0.40199407935142517,
+            "gan": 0.1233673021197319,
+            "hybrid": 427.49151611328125,
+            "identity_residual": 3.4194560516453976e-09,
+            "independent_semantic": 37.17045974731445,
+            "kde": 450.1271057128906,
+            "quantum_addition": 0.9227617979049683,
+            "scale_effect": 22.506364822387695,
+            "scaled_kde": 427.6207275390625,
+            "standalone_quantum": 17.961626052856445,
+            "total_delta": 22.654991149902344
+          },
+          "losses": {
+            "adversarial": 0.6944762468338013,
+            "auxiliary": 2.300719976425171,
+            "centroid_fidelity_proxy": 0.627255916595459,
+            "diversity_promotion_proxy": -0.017973532900214195,
+            "hybrid": 53.480587005615234,
+            "independent_semantic": 3.6898043155670166,
+            "kde": 56.1972770690918,
+            "quantum": 3.140765905380249,
+            "scaled_kde": 53.38741683959961
+          },
+          "module_gradient_norms": {
+            "kde": {
+              "image_decoder": 445.9530334472656,
+              "input_projection": 61.15407180786133,
+              "label_embedding": 0.6929101347923279
+            },
+            "quantum_addition": {
+              "image_decoder": 0.813389003276825,
+              "input_projection": 0.43574801087379456,
+              "label_embedding": 0.0033770021982491016
+            },
+            "scale_effect": {
+              "image_decoder": 22.29766082763672,
+              "input_projection": 3.0577070713043213,
+              "label_embedding": 0.03464537113904953
+            },
+            "total_delta": {
+              "image_decoder": 22.447967529296875,
+              "input_projection": 3.055534839630127,
+              "label_embedding": 0.03285692632198334
+            }
+          },
+          "weighted_to_gan_norm_ratios": {
+            "hybrid": 0.06930385529994965,
+            "kde": 0.07297348976135254,
+            "quantum_addition": 0.00014959584223106503,
+            "scale_effect": 0.0036486757453531027,
+            "scaled_kde": 0.0693248063325882,
+            "total_delta": 0.0036727706901729107
+          }
+        },
+        "fixed_balanced_final_batches": {
+          "classical_generator": {
+            "batch_size": 100,
+            "classes_present": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "cosines": {
+              "quantum_addition": {
+                "adversarial": -0.4035895764827728,
+                "auxiliary": -0.08453856408596039,
+                "centroid_fidelity_proxy": -0.5404977202415466,
+                "diversity_promotion_proxy": -0.49325424432754517,
+                "gan": -0.4262375235557556,
+                "independent_semantic": -0.3558632731437683,
+                "kde": 0.8319724202156067,
+                "standalone_quantum": 0.846951425075531
+              },
+              "scale_effect": {
+                "adversarial": 0.32085150480270386,
+                "auxiliary": 0.2026834487915039,
+                "centroid_fidelity_proxy": 0.6750395894050598,
+                "diversity_promotion_proxy": 0.6072080731391907,
+                "gan": 0.3526700735092163,
+                "independent_semantic": 0.4621662199497223,
+                "kde": -0.9271579384803772,
+                "standalone_quantum": -0.6778125166893005
+              },
+              "total_delta": {
+                "adversarial": 0.17795881628990173,
+                "auxiliary": 0.262182354927063,
+                "centroid_fidelity_proxy": 0.6456320285797119,
+                "diversity_promotion_proxy": 0.5745434165000916,
+                "gan": 0.21087734401226044,
+                "independent_semantic": 0.45450207591056824,
+                "kde": -0.8080171942710876,
+                "standalone_quantum": -0.38090988993644714
+              }
+            },
+            "decomposition": {
+              "identity_residual_norm": 2.8968152321340312e-09,
+              "quantum_addition_over_total_delta": 0.8788458108901978,
+              "scale_effect_over_total_delta": 1.6601192951202393,
+              "scale_effect_quantum_addition_cosine": -0.8664788007736206,
+              "standalone_quantum_over_kde": 0.6951084733009338,
+              "total_delta_quantum_addition_cosine": -0.559612512588501,
+              "total_delta_scale_effect_cosine": 0.8986179232597351
+            },
+            "generator_mode": "eval",
+            "gradient_norms": {
+              "adversarial": 7.091869354248047,
+              "auxiliary": 0.698821485042572,
+              "centroid_fidelity_proxy": 2.312514305114746,
+              "diversity_promotion_proxy": 0.5507160425186157,
+              "gan": 6.8536481857299805,
+              "hybrid": 13.60885238647461,
+              "identity_residual": 2.8968152321340312e-09,
+              "independent_semantic": 24.033851623535156,
+              "kde": 14.116744995117188,
+              "quantum_addition": 0.558005690574646,
+              "scale_effect": 1.0540597438812256,
+              "scaled_kde": 13.145398139953613,
+              "standalone_quantum": 9.812668800354004,
+              "total_delta": 0.6349301338195801
+            },
+            "losses": {
+              "adversarial": 1.5984655618667603,
+              "auxiliary": 0.026644892990589142,
+              "centroid_fidelity_proxy": 0.37617751955986023,
+              "diversity_promotion_proxy": -0.06173659488558769,
+              "hybrid": 1.0020183324813843,
+              "independent_semantic": 0.9446411728858948,
+              "kde": 1.0181856155395508,
+              "quantum": 1.046729564666748,
+              "scaled_kde": 1.0190216302871704
+            },
+            "module_gradient_norms": {
+              "kde": {
+                "image_decoder": 12.582037925720215,
+                "input_projection": 6.377762794494629,
+                "label_embedding": 0.5467498302459717
+              },
+              "quantum_addition": {
+                "image_decoder": 0.49761083722114563,
+                "input_projection": 0.25189459323883057,
+                "label_embedding": 0.017404628917574883
+              },
+              "scale_effect": {
+                "image_decoder": 0.9963364601135254,
+                "input_projection": 0.34336522221565247,
+                "label_embedding": 0.0213518887758255
+              },
+              "total_delta": {
+                "image_decoder": 0.5664696097373962,
+                "input_projection": 0.2864559292793274,
+                "label_embedding": 0.01383564155548811
+              }
+            },
+            "weighted_to_gan_norm_ratios": {
+              "hybrid": 3.971272599301301e-05,
+              "kde": 4.119483128306456e-05,
+              "quantum_addition": 1.6283464674415882e-06,
+              "scale_effect": 3.075908352911938e-06,
+              "scaled_kde": 3.8360296457540244e-05,
+              "total_delta": 1.8528237433201866e-06
+            }
+          },
+          "hybrid_generator": {
+            "batch_size": 100,
+            "classes_present": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "cosines": {
+              "quantum_addition": {
+                "adversarial": 0.37216028571128845,
+                "auxiliary": 0.22054727375507355,
+                "centroid_fidelity_proxy": -0.3552277982234955,
+                "diversity_promotion_proxy": -0.33459803462028503,
+                "gan": 0.40022793412208557,
+                "independent_semantic": -0.3433656692504883,
+                "kde": 0.8172760009765625,
+                "standalone_quantum": 0.8891208171844482
+              },
+              "scale_effect": {
+                "adversarial": -0.36821767687797546,
+                "auxiliary": -0.1289951503276825,
+                "centroid_fidelity_proxy": 0.545617401599884,
+                "diversity_promotion_proxy": 0.48230743408203125,
+                "gan": -0.3763028383255005,
+                "independent_semantic": 0.5416610240936279,
+                "kde": -0.9647456407546997,
+                "standalone_quantum": -0.731066882610321
+              },
+              "total_delta": {
+                "adversarial": -0.3213267922401428,
+                "auxiliary": -0.07125598937273026,
+                "centroid_fidelity_proxy": 0.5660398006439209,
+                "diversity_promotion_proxy": 0.4909275770187378,
+                "gan": -0.3192668855190277,
+                "independent_semantic": 0.5661900639533997,
+                "kde": -0.9141860008239746,
+                "standalone_quantum": -0.5691420435905457
+              }
+            },
+            "decomposition": {
+              "identity_residual_norm": 3.276057203294158e-09,
+              "quantum_addition_over_total_delta": 0.4581543803215027,
+              "scale_effect_over_total_delta": 1.3357144594192505,
+              "scale_effect_quantum_addition_cosine": -0.8121713995933533,
+              "standalone_quantum_over_kde": 0.5190380811691284,
+              "total_delta_quantum_addition_cosine": -0.6266746520996094,
+              "total_delta_scale_effect_cosine": 0.9636144638061523
+            },
+            "generator_mode": "eval",
+            "gradient_norms": {
+              "adversarial": 3.366945505142212,
+              "auxiliary": 0.7864272594451904,
+              "centroid_fidelity_proxy": 1.7143186330795288,
+              "diversity_promotion_proxy": 0.4588054120540619,
+              "gan": 3.564188241958618,
+              "hybrid": 20.812368392944336,
+              "identity_residual": 3.276057203294158e-09,
+              "independent_semantic": 25.96710205078125,
+              "kde": 21.942951202392578,
+              "quantum_addition": 0.5696616768836975,
+              "scale_effect": 1.660805583000183,
+              "scaled_kde": 20.345394134521484,
+              "standalone_quantum": 11.389226913452148,
+              "total_delta": 1.2433836460113525
+            },
+            "losses": {
+              "adversarial": 1.2001044750213623,
+              "auxiliary": 0.03295140340924263,
+              "centroid_fidelity_proxy": 0.3736249804496765,
+              "diversity_promotion_proxy": -0.06189707666635513,
+              "hybrid": 1.1667835712432861,
+              "independent_semantic": 0.950713574886322,
+              "kde": 1.18097722530365,
+              "quantum": 1.2750719785690308,
+              "scaled_kde": 1.1734799146652222
+            },
+            "module_gradient_norms": {
+              "kde": {
+                "image_decoder": 20.917823791503906,
+                "input_projection": 6.609987258911133,
+                "label_embedding": 0.4958101511001587
+              },
+              "quantum_addition": {
+                "image_decoder": 0.5022610425949097,
+                "input_projection": 0.268302321434021,
+                "label_embedding": 0.016190791502594948
+              },
+              "scale_effect": {
+                "image_decoder": 1.61820387840271,
+                "input_projection": 0.37312614917755127,
+                "label_embedding": 0.021634064614772797
+              },
+              "total_delta": {
+                "image_decoder": 1.20445716381073,
+                "input_projection": 0.3083339333534241,
+                "label_embedding": 0.014697869308292866
+              }
+            },
+            "weighted_to_gan_norm_ratios": {
+              "hybrid": 0.00011678601731546223,
+              "kde": 0.00012313014303799719,
+              "quantum_addition": 3.1965855669113807e-06,
+              "scale_effect": 9.319403943663929e-06,
+              "scaled_kde": 0.00011416565394029021,
+              "total_delta": 6.977092652959982e-06
+            }
+          }
+        }
+      },
+      "outcome": {
+        "class_fid_delta_fraction_from_centroid": 0.8862741440526756,
+        "classical": [
+          {
+            "class": 0,
+            "class_fid": 0.400128552184627,
+            "conditional_accuracy": 0.7860000133514404,
+            "fid_centroid_component": 0.32201898097991943,
+            "fid_covariance_component": 0.07810957120470757,
+            "intra_class_diversity": 0.43114709854125977,
+            "target_nll": 0.8702875971794128,
+            "target_probability": 0.7797470092773438,
+            "top_wrong_class": 2,
+            "top_wrong_fraction": 0.06800000369548798
+          },
+          {
+            "class": 1,
+            "class_fid": 0.17395764585054543,
+            "conditional_accuracy": 0.9160000085830688,
+            "fid_centroid_component": 0.11191427707672119,
+            "fid_covariance_component": 0.06204336877382424,
+            "intra_class_diversity": 0.31538859009742737,
+            "target_nll": 0.2780606150627136,
+            "target_probability": 0.8977029919624329,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.04600000008940697
+          },
+          {
+            "class": 2,
+            "class_fid": 0.4099764374243723,
+            "conditional_accuracy": 0.8199999928474426,
+            "fid_centroid_component": 0.3358114957809448,
+            "fid_covariance_component": 0.07416494164342746,
+            "intra_class_diversity": 0.3865029811859131,
+            "target_nll": 0.814207911491394,
+            "target_probability": 0.78125,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.057999998331069946
+          },
+          {
+            "class": 3,
+            "class_fid": 0.43180597554343797,
+            "conditional_accuracy": 0.8519999980926514,
+            "fid_centroid_component": 0.38262641429901123,
+            "fid_covariance_component": 0.04917956124442674,
+            "intra_class_diversity": 0.39299288392066956,
+            "target_nll": 0.6590275764465332,
+            "target_probability": 0.8373092412948608,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.057999998331069946
+          },
+          {
+            "class": 4,
+            "class_fid": 0.21022479731533314,
+            "conditional_accuracy": 0.9139999747276306,
+            "fid_centroid_component": 0.14212891459465027,
+            "fid_covariance_component": 0.06809588272068287,
+            "intra_class_diversity": 0.37985551357269287,
+            "target_nll": 0.3186625838279724,
+            "target_probability": 0.9002792239189148,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.02800000086426735
+          },
+          {
+            "class": 5,
+            "class_fid": 0.6941728121477104,
+            "conditional_accuracy": 0.4000000059604645,
+            "fid_centroid_component": 0.622337818145752,
+            "fid_covariance_component": 0.07183499400195847,
+            "intra_class_diversity": 0.3561968207359314,
+            "target_nll": 2.735975980758667,
+            "target_probability": 0.36589518189430237,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.2800000011920929
+          },
+          {
+            "class": 6,
+            "class_fid": 0.3390040289867232,
+            "conditional_accuracy": 0.5860000252723694,
+            "fid_centroid_component": 0.28998610377311707,
+            "fid_covariance_component": 0.04901792521360615,
+            "intra_class_diversity": 0.36404046416282654,
+            "target_nll": 2.382798433303833,
+            "target_probability": 0.5524624586105347,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.10999999940395355
+          },
+          {
+            "class": 7,
+            "class_fid": 0.3118100454877829,
+            "conditional_accuracy": 0.6620000004768372,
+            "fid_centroid_component": 0.23690712451934814,
+            "fid_covariance_component": 0.07490292096843476,
+            "intra_class_diversity": 0.35890597105026245,
+            "target_nll": 1.2221260070800781,
+            "target_probability": 0.6320894956588745,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.1679999977350235
+          },
+          {
+            "class": 8,
+            "class_fid": 0.31845029913404954,
+            "conditional_accuracy": 0.6359999775886536,
+            "fid_centroid_component": 0.2699199914932251,
+            "fid_covariance_component": 0.048530307640824444,
+            "intra_class_diversity": 0.39063289761543274,
+            "target_nll": 1.2785700559616089,
+            "target_probability": 0.6222873330116272,
+            "top_wrong_class": 9,
+            "top_wrong_fraction": 0.15800000727176666
+          },
+          {
+            "class": 9,
+            "class_fid": 0.18148190142024329,
+            "conditional_accuracy": 0.6200000047683716,
+            "fid_centroid_component": 0.14133837819099426,
+            "fid_covariance_component": 0.04014352322924902,
+            "intra_class_diversity": 0.3947182595729828,
+            "target_nll": 1.843227744102478,
+            "target_probability": 0.5885778665542603,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.2639999985694885
+          }
+        ],
+        "counts": {
+          "accuracy_improved_classes": [
+            0,
+            2,
+            6,
+            7,
+            8,
+            9
+          ],
+          "class_fid_improved_classes": [],
+          "diversity_improved_classes": []
+        },
+        "hybrid": [
+          {
+            "class": 0,
+            "class_fid": 0.4113370524898129,
+            "conditional_accuracy": 0.878000020980835,
+            "fid_centroid_component": 0.33250731229782104,
+            "fid_covariance_component": 0.07882974019199185,
+            "intra_class_diversity": 0.4274989664554596,
+            "target_nll": 0.5231627821922302,
+            "target_probability": 0.84794020652771,
+            "top_wrong_class": 2,
+            "top_wrong_fraction": 0.04800000041723251
+          },
+          {
+            "class": 1,
+            "class_fid": 0.20241431759533726,
+            "conditional_accuracy": 0.8619999885559082,
+            "fid_centroid_component": 0.14079293608665466,
+            "fid_covariance_component": 0.0616213815086826,
+            "intra_class_diversity": 0.29528331756591797,
+            "target_nll": 0.44657987356185913,
+            "target_probability": 0.833340585231781,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.0560000017285347
+          },
+          {
+            "class": 2,
+            "class_fid": 0.42471661693192025,
+            "conditional_accuracy": 0.8640000224113464,
+            "fid_centroid_component": 0.34668639302253723,
+            "fid_covariance_component": 0.07803022390938302,
+            "intra_class_diversity": 0.3712449073791504,
+            "target_nll": 0.5696591138839722,
+            "target_probability": 0.8308637142181396,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.06199999898672104
+          },
+          {
+            "class": 3,
+            "class_fid": 0.4590934586324058,
+            "conditional_accuracy": 0.7720000147819519,
+            "fid_centroid_component": 0.4055485725402832,
+            "fid_covariance_component": 0.0535448860921226,
+            "intra_class_diversity": 0.3892855644226074,
+            "target_nll": 0.9818224906921387,
+            "target_probability": 0.7484936714172363,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.07199999690055847
+          },
+          {
+            "class": 4,
+            "class_fid": 0.21761534433646365,
+            "conditional_accuracy": 0.8939999938011169,
+            "fid_centroid_component": 0.1508701741695404,
+            "fid_covariance_component": 0.06674517016692325,
+            "intra_class_diversity": 0.3750070035457611,
+            "target_nll": 0.369536817073822,
+            "target_probability": 0.8765174150466919,
+            "top_wrong_class": 9,
+            "top_wrong_fraction": 0.03200000151991844
+          },
+          {
+            "class": 5,
+            "class_fid": 0.7375612444766163,
+            "conditional_accuracy": 0.3619999885559082,
+            "fid_centroid_component": 0.6621617078781128,
+            "fid_covariance_component": 0.07539953659850351,
+            "intra_class_diversity": 0.3477514088153839,
+            "target_nll": 2.786498785018921,
+            "target_probability": 0.33241039514541626,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.23399999737739563
+          },
+          {
+            "class": 6,
+            "class_fid": 0.35074804760360584,
+            "conditional_accuracy": 0.6679999828338623,
+            "fid_centroid_component": 0.3020707368850708,
+            "fid_covariance_component": 0.04867731071853504,
+            "intra_class_diversity": 0.3558683395385742,
+            "target_nll": 1.5188864469528198,
+            "target_probability": 0.6370118856430054,
+            "top_wrong_class": 2,
+            "top_wrong_fraction": 0.07000000029802322
+          },
+          {
+            "class": 7,
+            "class_fid": 0.3145481668864773,
+            "conditional_accuracy": 0.7059999704360962,
+            "fid_centroid_component": 0.2348913997411728,
+            "fid_covariance_component": 0.07965676714530451,
+            "intra_class_diversity": 0.3554150462150574,
+            "target_nll": 1.0722092390060425,
+            "target_probability": 0.6639894843101501,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.18199999630451202
+          },
+          {
+            "class": 8,
+            "class_fid": 0.33705555994665953,
+            "conditional_accuracy": 0.6819999814033508,
+            "fid_centroid_component": 0.2865402102470398,
+            "fid_covariance_component": 0.05051534969961974,
+            "intra_class_diversity": 0.3887161612510681,
+            "target_nll": 1.0895494222640991,
+            "target_probability": 0.6627928614616394,
+            "top_wrong_class": 9,
+            "top_wrong_fraction": 0.0860000029206276
+          },
+          {
+            "class": 9,
+            "class_fid": 0.207205258028403,
+            "conditional_accuracy": 0.6700000166893005,
+            "fid_centroid_component": 0.16244885325431824,
+            "fid_covariance_component": 0.04475640477408477,
+            "intra_class_diversity": 0.3699101507663727,
+            "target_nll": 1.4101394414901733,
+            "target_probability": 0.6466942429542542,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.24199999868869781
+          }
+        ],
+        "hybrid_minus_classical": [
+          {
+            "class": 0,
+            "class_fid": 0.011208500305185887,
+            "conditional_accuracy": 0.09200000762939453,
+            "fid_centroid_component": 0.010488331317901611,
+            "fid_covariance_component": 0.0007201689872842754,
+            "intra_class_diversity": -0.003648132085800171,
+            "target_nll": -0.3471248149871826,
+            "target_probability": 0.06819319725036621
+          },
+          {
+            "class": 1,
+            "class_fid": 0.028456671744791828,
+            "conditional_accuracy": -0.054000020027160645,
+            "fid_centroid_component": 0.02887865900993347,
+            "fid_covariance_component": -0.0004219872651416434,
+            "intra_class_diversity": -0.0201052725315094,
+            "target_nll": 0.1685192584991455,
+            "target_probability": -0.06436240673065186
+          },
+          {
+            "class": 2,
+            "class_fid": 0.014740179507547968,
+            "conditional_accuracy": 0.04400002956390381,
+            "fid_centroid_component": 0.010874897241592407,
+            "fid_covariance_component": 0.003865282265955561,
+            "intra_class_diversity": -0.015258073806762695,
+            "target_nll": -0.24454879760742188,
+            "target_probability": 0.04961371421813965
+          },
+          {
+            "class": 3,
+            "class_fid": 0.027287483088967834,
+            "conditional_accuracy": -0.07999998331069946,
+            "fid_centroid_component": 0.022922158241271973,
+            "fid_covariance_component": 0.004365324847695862,
+            "intra_class_diversity": -0.003707319498062134,
+            "target_nll": 0.32279491424560547,
+            "target_probability": -0.08881556987762451
+          },
+          {
+            "class": 4,
+            "class_fid": 0.007390547021130511,
+            "conditional_accuracy": -0.019999980926513672,
+            "fid_centroid_component": 0.008741259574890137,
+            "fid_covariance_component": -0.0013507125537596254,
+            "intra_class_diversity": -0.004848510026931763,
+            "target_nll": 0.05087423324584961,
+            "target_probability": -0.0237618088722229
+          },
+          {
+            "class": 5,
+            "class_fid": 0.04338843232890588,
+            "conditional_accuracy": -0.038000017404556274,
+            "fid_centroid_component": 0.03982388973236084,
+            "fid_covariance_component": 0.0035645425965450395,
+            "intra_class_diversity": -0.008445411920547485,
+            "target_nll": 0.050522804260253906,
+            "target_probability": -0.03348478674888611
+          },
+          {
+            "class": 6,
+            "class_fid": 0.011744018616882623,
+            "conditional_accuracy": 0.08199995756149292,
+            "fid_centroid_component": 0.012084633111953735,
+            "fid_covariance_component": -0.0003406144950711121,
+            "intra_class_diversity": -0.00817212462425232,
+            "target_nll": -0.8639119863510132,
+            "target_probability": 0.0845494270324707
+          },
+          {
+            "class": 7,
+            "class_fid": 0.002738121398694393,
+            "conditional_accuracy": 0.04399996995925903,
+            "fid_centroid_component": -0.002015724778175354,
+            "fid_covariance_component": 0.004753846176869747,
+            "intra_class_diversity": -0.003490924835205078,
+            "target_nll": -0.14991676807403564,
+            "target_probability": 0.031899988651275635
+          },
+          {
+            "class": 8,
+            "class_fid": 0.01860526081260999,
+            "conditional_accuracy": 0.046000003814697266,
+            "fid_centroid_component": 0.016620218753814697,
+            "fid_covariance_component": 0.0019850420587952944,
+            "intra_class_diversity": -0.001916736364364624,
+            "target_nll": -0.18902063369750977,
+            "target_probability": 0.04050552845001221
+          },
+          {
+            "class": 9,
+            "class_fid": 0.02572335660815972,
+            "conditional_accuracy": 0.050000011920928955,
+            "fid_centroid_component": 0.021110475063323975,
+            "fid_covariance_component": 0.004612881544835745,
+            "intra_class_diversity": -0.024808108806610107,
+            "target_nll": -0.4330883026123047,
+            "target_probability": 0.058116376399993896
+          }
+        ],
+        "independent_classifier_prediction_disagreement": 0.30300000309944153,
+        "mean_hybrid_minus_classical": {
+          "class_fid": 0.019128257143287662,
+          "conditional_accuracy": 0.016599997878074646,
+          "fid_centroid_component": 0.01695287972688675,
+          "fid_covariance_component": 0.0021753774164009142,
+          "intra_class_diversity": -0.009440061450004578,
+          "target_nll": -0.16349000930786134,
+          "target_probability": 0.012245365977287292
+        },
+        "paired_image_rmse": 0.29351526498794556
+      },
+      "seed": 101,
+      "teacher_scores": {
+        "classical_generator": {
+          "effective_centered_logit_perturbation_ratio": 0.025572028011083603,
+          "hybrid": {
+            "centered_logit_rms": 3.9562158584594727,
+            "cross_entropy": 1.169750452041626,
+            "mean_target_margin": 0.5228840112686157,
+            "requested_class_accuracy": 0.5899999737739563
+          },
+          "hybrid_change_beneficial_for_requested_label": 0.008999999612569809,
+          "hybrid_change_harmful_for_requested_label": 0.007000000216066837,
+          "hybrid_changed_kde_and_matches_independent_classifier": 0.009999999776482582,
+          "hybrid_changed_kde_fraction": 0.020999999716877937,
+          "kde": {
+            "centered_logit_rms": 4.088937759399414,
+            "cross_entropy": 1.1854963302612305,
+            "mean_target_margin": 0.5099378228187561,
+            "requested_class_accuracy": 0.5879999995231628
+          },
+          "kde_quantum_prediction_agreement": 0.6610000133514404,
+          "quantum": {
+            "centered_logit_rms": 1.9866851568222046,
+            "cross_entropy": 1.2500150203704834,
+            "mean_target_margin": 0.26531532406806946,
+            "requested_class_accuracy": 0.5699999928474426
+          }
+        },
+        "hybrid_generator": {
+          "effective_centered_logit_perturbation_ratio": 0.02570645697414875,
+          "hybrid": {
+            "centered_logit_rms": 3.8771066665649414,
+            "cross_entropy": 1.1593468189239502,
+            "mean_target_margin": 0.4551955759525299,
+            "requested_class_accuracy": 0.5979999899864197
+          },
+          "hybrid_change_beneficial_for_requested_label": 0.009999999776482582,
+          "hybrid_change_harmful_for_requested_label": 0.0010000000474974513,
+          "hybrid_changed_kde_and_matches_independent_classifier": 0.008999999612569809,
+          "hybrid_changed_kde_fraction": 0.01899999938905239,
+          "kde": {
+            "centered_logit_rms": 4.007042407989502,
+            "cross_entropy": 1.1728012561798096,
+            "mean_target_margin": 0.44428178668022156,
+            "requested_class_accuracy": 0.5889999866485596
+          },
+          "kde_quantum_prediction_agreement": 0.6399999856948853,
+          "quantum": {
+            "centered_logit_rms": 1.9571313858032227,
+            "cross_entropy": 1.2962554693222046,
+            "mean_target_margin": 0.169523224234581,
+            "requested_class_accuracy": 0.5799999833106995
+          }
+        }
+      },
+      "trajectory_divergence": {
+        "final_parameter_distance": {
+          "l2": 3.3185765743255615,
+          "parameter_cosine": 0.9957585334777832,
+          "relative_to_classical_parameter_norm": 0.09359017759561539
+        },
+        "final_to_first_difference_amplification": 449.86249447265936,
+        "first_update_hybrid_minus_kde_l2": 0.0073768687434494495,
+        "logged_steps": 200,
+        "metrics": {
+          "discriminator.total": {
+            "first_difference_step": 2,
+            "maximum_absolute_difference": 0.4478321671485901,
+            "root_mean_square_difference": 0.05863572591163466,
+            "step_1": {
+              "absolute_difference": 0.0,
+              "classical": 3.4656665325164795,
+              "hybrid": 3.4656665325164795
+            }
+          },
+          "generator.adversarial": {
+            "first_difference_step": 2,
+            "maximum_absolute_difference": 1.083804726600647,
+            "root_mean_square_difference": 0.2170230793824257,
+            "step_1": {
+              "absolute_difference": 0.0,
+              "classical": 0.6944762468338013,
+              "hybrid": 0.6944762468338013
+            }
+          },
+          "generator.auxiliary": {
+            "first_difference_step": 2,
+            "maximum_absolute_difference": 0.05799673870205879,
+            "root_mean_square_difference": 0.014562303121175077,
+            "step_1": {
+              "absolute_difference": 0.0,
+              "classical": 2.300719976425171,
+              "hybrid": 2.300719976425171
+            }
+          },
+          "generator.regularizer": {
+            "first_difference_step": 1,
+            "maximum_absolute_difference": 2.7166900634765625,
+            "root_mean_square_difference": 0.5202940175610149,
+            "step_1": {
+              "absolute_difference": 2.7166900634765625,
+              "classical": 56.1972770690918,
+              "hybrid": 53.480587005615234
+            }
+          }
+        }
+      }
+    },
+    {
+      "architecture": {
+        "final_hybrid_minus_classical": {
+          "l2": 3.8986363410949707,
+          "parameter_cosine": 0.9942814707756042,
+          "relative_to_classical_parameter_norm": 0.10844262689352036
+        },
+        "final_parameter_change_from_initialization": {
+          "classical": {
+            "angle_head": {
+              "changed_values": 0,
+              "l2": 0.0,
+              "max_absolute": 0.0,
+              "values": 29200
+            },
+            "image_decoder": {
+              "changed_values": 370305,
+              "l2": 2.967501163482666,
+              "max_absolute": 0.03748856112360954,
+              "values": 370305
+            },
+            "input_projection": {
+              "changed_values": 1392384,
+              "l2": 4.958564281463623,
+              "max_absolute": 0.03260115534067154,
+              "values": 1392384
+            },
+            "label_embedding": {
+              "changed_values": 100,
+              "l2": 0.19622375071048737,
+              "max_absolute": 0.03985774517059326,
+              "values": 100
+            }
+          },
+          "hybrid": {
+            "angle_head": {
+              "changed_values": 0,
+              "l2": 0.0,
+              "max_absolute": 0.0,
+              "values": 29200
+            },
+            "image_decoder": {
+              "changed_values": 370305,
+              "l2": 2.9824068546295166,
+              "max_absolute": 0.034362100064754486,
+              "values": 370305
+            },
+            "input_projection": {
+              "changed_values": 1392384,
+              "l2": 4.976757049560547,
+              "max_absolute": 0.034925445914268494,
+              "values": 1392384
+            },
+            "label_embedding": {
+              "changed_values": 100,
+              "l2": 0.1952270269393921,
+              "max_absolute": 0.04072463512420654,
+              "values": 100
+            }
+          }
+        },
+        "generator_angle_head_parameters": 29200,
+        "generator_image_path_parameters": 1762789,
+        "hybrid_gradient_reaches_angle_head": false,
+        "hybrid_gradient_reaches_image_path": true,
+        "regularizer_trainable_parameters": 0
+      },
+      "checkpoints": {
+        "classical": {
+          "path": "/private/tmp/contrastive-heldout-cpu-seed202/classical_log_kde_contrastive-seed-202/checkpoint-final.pt",
+          "sha256": "ae459e43674f1b723b1f47f6dc81f86c099d2d1345dc2e5e892a4e318dca1871"
+        },
+        "hybrid": {
+          "path": "/private/tmp/contrastive-heldout-cpu-seed202/hybrid_modular_kde_contrastive-seed-202/checkpoint-final.pt",
+          "sha256": "2f3675f6eca0148d8f7c47e3f5680c8887cfb31a4360e0fd4d6f3f19bf55bae3"
+        }
+      },
+      "evaluation_verification": {
+        "classical": {
+          "available": true,
+          "differences": {
+            "class_conditional_feature_fid_64": 0.0,
+            "conditional_accuracy": -3.129243852928454e-08,
+            "generated_intra_class_diversity": 2.682209016002801e-08
+          },
+          "maximum_absolute_difference": 3.129243852928454e-08,
+          "path": "/private/tmp/contrastive-heldout-cpu-seed202/classical_log_kde_contrastive-seed-202/evaluation.json",
+          "recomputed": {
+            "class_conditional_feature_fid_64": 0.3128768413277595,
+            "conditional_accuracy": 0.74979999512434,
+            "generated_intra_class_diversity": 0.366518047451973
+          },
+          "stored": {
+            "class_conditional_feature_fid_64": 0.3128768413277595,
+            "conditional_accuracy": 0.7498000264167786,
+            "generated_intra_class_diversity": 0.3665180206298828
+          }
+        },
+        "hybrid": {
+          "available": true,
+          "differences": {
+            "class_conditional_feature_fid_64": 0.0,
+            "conditional_accuracy": -5.960464455334602e-09,
+            "generated_intra_class_diversity": 2.9802322387695312e-08
+          },
+          "maximum_absolute_difference": 2.9802322387695312e-08,
+          "path": "/private/tmp/contrastive-heldout-cpu-seed202/hybrid_modular_kde_contrastive-seed-202/evaluation.json",
+          "recomputed": {
+            "class_conditional_feature_fid_64": 0.30545753709130513,
+            "conditional_accuracy": 0.7486000001430512,
+            "generated_intra_class_diversity": 0.37545397877693176
+          },
+          "stored": {
+            "class_conditional_feature_fid_64": 0.30545753709130513,
+            "conditional_accuracy": 0.7486000061035156,
+            "generated_intra_class_diversity": 0.3754539489746094
+          }
+        }
+      },
+      "first_adam_update": {
+        "difference_norms": {
+          "hybrid_minus_kde": 0.007261559832841158,
+          "hybrid_minus_scaled_kde": 0.0014633068349212408,
+          "scaled_kde_minus_kde": 0.007207885384559631
+        },
+        "losses": {
+          "hybrid": {
+            "gan": 2.9977636337280273,
+            "regularizer": 36.897857666015625,
+            "total": 2.9985015392303467
+          },
+          "kde": {
+            "gan": 2.9977636337280273,
+            "regularizer": 38.76936721801758,
+            "total": 2.9985389709472656
+          },
+          "scaled_kde": {
+            "gan": 2.9977636337280273,
+            "regularizer": 36.831695556640625,
+            "total": 2.998500347137451
+          }
+        },
+        "scaling_explanation": {
+          "hybrid_kde_difference_vs_scaling_difference_cosine": 0.9795863032341003,
+          "quantum_residual_over_hybrid_kde_difference": 0.2015141248703003,
+          "scaling_difference_over_hybrid_kde_difference": 0.9926084280014038
+        },
+        "update_norms": {
+          "hybrid": 0.26497602462768555,
+          "kde": 0.264974445104599,
+          "scaled_kde": 0.26497602462768555
+        }
+      },
+      "global_step": 200,
+      "gradients": {
+        "actual_first_generator_batch": {
+          "batch_size": 64,
+          "classes_present": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "cosines": {
+            "quantum_addition": {
+              "adversarial": 0.47327107191085815,
+              "auxiliary": 0.15852785110473633,
+              "centroid_fidelity_proxy": -0.4746522307395935,
+              "diversity_promotion_proxy": -0.28251874446868896,
+              "gan": 0.39316943287849426,
+              "independent_semantic": 0.06041686609387398,
+              "kde": 0.633243978023529,
+              "standalone_quantum": 0.8825671076774597
+            },
+            "scale_effect": {
+              "adversarial": -0.5112438797950745,
+              "auxiliary": -0.1821564882993698,
+              "centroid_fidelity_proxy": 0.7841857075691223,
+              "diversity_promotion_proxy": 0.5656144022941589,
+              "gan": -0.433198481798172,
+              "independent_semantic": -0.206247940659523,
+              "kde": -0.9999927878379822,
+              "standalone_quantum": -0.5141859650611877
+            },
+            "total_delta": {
+              "adversarial": -0.5062960386276245,
+              "auxiliary": -0.18071748316287994,
+              "centroid_fidelity_proxy": 0.7846569418907166,
+              "diversity_promotion_proxy": 0.5678736567497253,
+              "gan": -0.42925772070884705,
+              "independent_semantic": -0.20843836665153503,
+              "kde": -0.999696671962738,
+              "standalone_quantum": -0.49616774916648865
+            }
+          },
+          "decomposition": {
+            "identity_residual_norm": 2.5406716730458356e-09,
+            "quantum_addition_over_total_delta": 0.032077591866254807,
+            "scale_effect_over_total_delta": 1.0200169086456299,
+            "scale_effect_quantum_addition_cosine": -0.6336154937744141,
+            "standalone_quantum_over_kde": 0.020025787875056267,
+            "total_delta_quantum_addition_cosine": -0.6142209768295288,
+            "total_delta_scale_effect_cosine": 0.9996918439865112
+          },
+          "generator_mode": "train",
+          "gradient_norms": {
+            "adversarial": 0.05493169277906418,
+            "auxiliary": 0.0749024897813797,
+            "centroid_fidelity_proxy": 4.553713798522949,
+            "diversity_promotion_proxy": 0.43505579233169556,
+            "gan": 0.0963241457939148,
+            "hybrid": 602.33740234375,
+            "identity_residual": 2.5406716730458356e-09,
+            "independent_semantic": 37.520816802978516,
+            "kde": 633.4248657226562,
+            "quantum_addition": 0.9975302219390869,
+            "scale_effect": 31.71988868713379,
+            "scaled_kde": 601.7052001953125,
+            "standalone_quantum": 12.684831619262695,
+            "total_delta": 31.097415924072266
+          },
+          "losses": {
+            "adversarial": 0.6966116428375244,
+            "auxiliary": 2.301151990890503,
+            "centroid_fidelity_proxy": 0.7075850963592529,
+            "diversity_promotion_proxy": -0.015914974734187126,
+            "hybrid": 36.897857666015625,
+            "independent_semantic": 3.1000962257385254,
+            "kde": 38.76936721801758,
+            "quantum": 2.88867449760437,
+            "scaled_kde": 36.831695556640625
+          },
+          "module_gradient_norms": {
+            "kde": {
+              "image_decoder": 629.7902221679688,
+              "input_projection": 67.75663757324219,
+              "label_embedding": 0.6290954351425171
+            },
+            "quantum_addition": {
+              "image_decoder": 0.9078609943389893,
+              "input_projection": 0.41332489252090454,
+              "label_embedding": 0.004188196267932653
+            },
+            "scale_effect": {
+              "image_decoder": 31.538375854492188,
+              "input_projection": 3.3883767127990723,
+              "label_embedding": 0.031397026032209396
+            },
+            "total_delta": {
+              "image_decoder": 30.90761947631836,
+              "input_projection": 3.430344820022583,
+              "label_embedding": 0.03158416226506233
+            }
+          },
+          "weighted_to_gan_norm_ratios": {
+            "hybrid": 0.1250646710395813,
+            "kde": 0.13151943683624268,
+            "quantum_addition": 0.0002071194612653926,
+            "scale_effect": 0.006586071569472551,
+            "scaled_kde": 0.1249333992600441,
+            "total_delta": 0.006456826347857714
+          }
+        },
+        "fixed_balanced_final_batches": {
+          "classical_generator": {
+            "batch_size": 100,
+            "classes_present": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "cosines": {
+              "quantum_addition": {
+                "adversarial": 0.032294515520334244,
+                "auxiliary": -0.5976907014846802,
+                "centroid_fidelity_proxy": -0.7102766633033752,
+                "diversity_promotion_proxy": -0.4982519745826721,
+                "gan": -0.050496362149715424,
+                "independent_semantic": -0.23587198555469513,
+                "kde": 0.8656297922134399,
+                "standalone_quantum": 0.8801155686378479
+              },
+              "scale_effect": {
+                "adversarial": -0.04639884829521179,
+                "auxiliary": 0.6705268025398254,
+                "centroid_fidelity_proxy": 0.7786135077476501,
+                "diversity_promotion_proxy": 0.5356793403625488,
+                "gan": 0.046253785490989685,
+                "independent_semantic": 0.302743136882782,
+                "kde": -0.9005736112594604,
+                "standalone_quantum": -0.8489257097244263
+              },
+              "total_delta": {
+                "adversarial": -0.06074507534503937,
+                "auxiliary": 0.6347497701644897,
+                "centroid_fidelity_proxy": 0.7069301605224609,
+                "diversity_promotion_proxy": 0.468568354845047,
+                "gan": 0.026587821543216705,
+                "independent_semantic": 0.34966203570365906,
+                "kde": -0.7358241677284241,
+                "standalone_quantum": -0.5746092200279236
+              }
+            },
+            "decomposition": {
+              "identity_residual_norm": 2.8158140263911946e-09,
+              "quantum_addition_over_total_delta": 1.8558506965637207,
+              "scale_effect_over_total_delta": 2.6009020805358887,
+              "scale_effect_quantum_addition_cosine": -0.95391446352005,
+              "standalone_quantum_over_kde": 1.0489442348480225,
+              "total_delta_quantum_addition_cosine": -0.6251876950263977,
+              "total_delta_scale_effect_cosine": 0.8305790424346924
+            },
+            "generator_mode": "eval",
+            "gradient_norms": {
+              "adversarial": 8.227869033813477,
+              "auxiliary": 1.1245049238204956,
+              "centroid_fidelity_proxy": 3.1178576946258545,
+              "diversity_promotion_proxy": 0.5368834733963013,
+              "gan": 8.047926902770996,
+              "hybrid": 13.420906066894531,
+              "identity_residual": 2.8158140263911946e-09,
+              "independent_semantic": 20.579198837280273,
+              "kde": 13.713807106018066,
+              "quantum_addition": 0.7456902861595154,
+              "scale_effect": 1.0450557470321655,
+              "scaled_kde": 12.780734062194824,
+              "standalone_quantum": 14.385018348693848,
+              "total_delta": 0.4018051028251648
+            },
+            "losses": {
+              "adversarial": 1.754347562789917,
+              "auxiliary": 0.02581198886036873,
+              "centroid_fidelity_proxy": 0.3203776478767395,
+              "diversity_promotion_proxy": -0.06601981818675995,
+              "hybrid": 0.9208633303642273,
+              "independent_semantic": 1.3256502151489258,
+              "kde": 0.9172741770744324,
+              "quantum": 1.2892370223999023,
+              "scaled_kde": 0.9214382171630859
+            },
+            "module_gradient_norms": {
+              "kde": {
+                "image_decoder": 12.487409591674805,
+                "input_projection": 5.655310153961182,
+                "label_embedding": 0.3880319893360138
+              },
+              "quantum_addition": {
+                "image_decoder": 0.6862694621086121,
+                "input_projection": 0.291216105222702,
+                "label_embedding": 0.016774456948041916
+              },
+              "scale_effect": {
+                "image_decoder": 0.9997320175170898,
+                "input_projection": 0.3039112985134125,
+                "label_embedding": 0.01775750331580639
+              },
+              "total_delta": {
+                "image_decoder": 0.3638257682323456,
+                "input_projection": 0.17036011815071106,
+                "label_embedding": 0.007454875856637955
+              }
+            },
+            "weighted_to_gan_norm_ratios": {
+              "hybrid": 3.335245492053218e-05,
+              "kde": 3.40803453582339e-05,
+              "quantum_addition": 1.853123762884934e-06,
+              "scale_effect": 2.5970805381803075e-06,
+              "scaled_kde": 3.176155223627575e-05,
+              "total_delta": 9.985305950976908e-07
+            }
+          },
+          "hybrid_generator": {
+            "batch_size": 100,
+            "classes_present": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "cosines": {
+              "quantum_addition": {
+                "adversarial": 0.485003799200058,
+                "auxiliary": 0.23449313640594482,
+                "centroid_fidelity_proxy": -0.39632880687713623,
+                "diversity_promotion_proxy": -0.38039201498031616,
+                "gan": 0.49349021911621094,
+                "independent_semantic": -0.008298582397401333,
+                "kde": 0.6798851490020752,
+                "standalone_quantum": 0.8014212250709534
+              },
+              "scale_effect": {
+                "adversarial": -0.726590633392334,
+                "auxiliary": -0.2609714865684509,
+                "centroid_fidelity_proxy": 0.6418619155883789,
+                "diversity_promotion_proxy": 0.5510087609291077,
+                "gan": -0.7127184867858887,
+                "independent_semantic": 0.10708654671907425,
+                "kde": -0.8161635398864746,
+                "standalone_quantum": -0.7264320850372314
+              },
+              "total_delta": {
+                "adversarial": -0.6584555506706238,
+                "auxiliary": -0.178732767701149,
+                "centroid_fidelity_proxy": 0.6124442219734192,
+                "diversity_promotion_proxy": 0.48727595806121826,
+                "gan": -0.6288816928863525,
+                "independent_semantic": 0.15757937729358673,
+                "kde": -0.6101990938186646,
+                "standalone_quantum": -0.3550526201725006
+              }
+            },
+            "decomposition": {
+              "identity_residual_norm": 4.4694221656982336e-09,
+              "quantum_addition_over_total_delta": 0.9580949544906616,
+              "scale_effect_over_total_delta": 1.5457607507705688,
+              "scale_effect_quantum_addition_cosine": -0.7789821028709412,
+              "standalone_quantum_over_kde": 1.0305463075637817,
+              "total_delta_quantum_addition_cosine": -0.246024951338768,
+              "total_delta_scale_effect_cosine": 0.799422025680542
+            },
+            "generator_mode": "eval",
+            "gradient_norms": {
+              "adversarial": 4.761990547180176,
+              "auxiliary": 1.6014909744262695,
+              "centroid_fidelity_proxy": 2.3986783027648926,
+              "diversity_promotion_proxy": 0.6215803027153015,
+              "gan": 5.441084384918213,
+              "hybrid": 9.381539344787598,
+              "identity_residual": 4.4694221656982336e-09,
+              "independent_semantic": 18.69009017944336,
+              "kde": 9.665559768676758,
+              "quantum_addition": 0.45795509219169617,
+              "scale_effect": 0.7388505935668945,
+              "scaled_kde": 9.072587966918945,
+              "standalone_quantum": 9.960806846618652,
+              "total_delta": 0.47798508405685425
+            },
+            "losses": {
+              "adversarial": 0.5511810183525085,
+              "auxiliary": 0.04853086173534393,
+              "centroid_fidelity_proxy": 0.317315936088562,
+              "diversity_promotion_proxy": -0.06690049916505814,
+              "hybrid": 0.9656327962875366,
+              "independent_semantic": 1.1068856716156006,
+              "kde": 0.96616530418396,
+              "quantum": 1.193902611732483,
+              "scaled_kde": 0.9637086391448975
+            },
+            "module_gradient_norms": {
+              "kde": {
+                "image_decoder": 7.3991875648498535,
+                "input_projection": 6.207274913787842,
+                "label_embedding": 0.3805520236492157
+              },
+              "quantum_addition": {
+                "image_decoder": 0.3499526381492615,
+                "input_projection": 0.2950327396392822,
+                "label_embedding": 0.014549893327057362
+              },
+              "scale_effect": {
+                "image_decoder": 0.6617733240127563,
+                "input_projection": 0.3281169533729553,
+                "label_embedding": 0.01719173602759838
+              },
+              "total_delta": {
+                "image_decoder": 0.4090302586555481,
+                "input_projection": 0.24705420434474945,
+                "label_embedding": 0.01132268738001585
+              }
+            },
+            "weighted_to_gan_norm_ratios": {
+              "hybrid": 3.4484077332308516e-05,
+              "kde": 3.552806447260082e-05,
+              "quantum_addition": 1.6833229210533318e-06,
+              "scale_effect": 2.715820983212325e-06,
+              "scaled_kde": 3.334845678182319e-05,
+              "total_delta": 1.756947881403903e-06
+            }
+          }
+        }
+      },
+      "outcome": {
+        "class_fid_delta_fraction_from_centroid": 0.845147395267812,
+        "classical": [
+          {
+            "class": 0,
+            "class_fid": 0.42310988252021464,
+            "conditional_accuracy": 0.878000020980835,
+            "fid_centroid_component": 0.34665048122406006,
+            "fid_covariance_component": 0.07645940129615458,
+            "intra_class_diversity": 0.42309796810150146,
+            "target_nll": 0.3860928416252136,
+            "target_probability": 0.8581395149230957,
+            "top_wrong_class": 2,
+            "top_wrong_fraction": 0.03999999910593033
+          },
+          {
+            "class": 1,
+            "class_fid": 0.16314984681380956,
+            "conditional_accuracy": 0.9559999704360962,
+            "fid_centroid_component": 0.11608618497848511,
+            "fid_covariance_component": 0.047063661835324455,
+            "intra_class_diversity": 0.318806529045105,
+            "target_nll": 0.16075856983661652,
+            "target_probability": 0.9295640587806702,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.024000000208616257
+          },
+          {
+            "class": 2,
+            "class_fid": 0.3726965838201844,
+            "conditional_accuracy": 0.8640000224113464,
+            "fid_centroid_component": 0.294129341840744,
+            "fid_covariance_component": 0.07856724197944037,
+            "intra_class_diversity": 0.36585772037506104,
+            "target_nll": 0.49178752303123474,
+            "target_probability": 0.8226428627967834,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.0560000017285347
+          },
+          {
+            "class": 3,
+            "class_fid": 0.2984610130445804,
+            "conditional_accuracy": 0.8759999871253967,
+            "fid_centroid_component": 0.24413669109344482,
+            "fid_covariance_component": 0.05432432195113557,
+            "intra_class_diversity": 0.3722372353076935,
+            "target_nll": 0.4450914263725281,
+            "target_probability": 0.8604244589805603,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.057999998331069946
+          },
+          {
+            "class": 4,
+            "class_fid": 0.21936963340287696,
+            "conditional_accuracy": 0.878000020980835,
+            "fid_centroid_component": 0.1506810486316681,
+            "fid_covariance_component": 0.06868858477120887,
+            "intra_class_diversity": 0.37273547053337097,
+            "target_nll": 0.4202813506126404,
+            "target_probability": 0.8545129299163818,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.05999999865889549
+          },
+          {
+            "class": 5,
+            "class_fid": 0.2740113063034865,
+            "conditional_accuracy": 0.8799999952316284,
+            "fid_centroid_component": 0.2149459719657898,
+            "fid_covariance_component": 0.05906533433769673,
+            "intra_class_diversity": 0.3847547471523285,
+            "target_nll": 0.44991740584373474,
+            "target_probability": 0.8584580421447754,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.07800000160932541
+          },
+          {
+            "class": 6,
+            "class_fid": 0.2534857687553232,
+            "conditional_accuracy": 0.7379999756813049,
+            "fid_centroid_component": 0.21056218445301056,
+            "fid_covariance_component": 0.042923584302312634,
+            "intra_class_diversity": 0.38080766797065735,
+            "target_nll": 1.2362167835235596,
+            "target_probability": 0.7071298360824585,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.12600000202655792
+          },
+          {
+            "class": 7,
+            "class_fid": 0.23874070906468625,
+            "conditional_accuracy": 0.9599999785423279,
+            "fid_centroid_component": 0.16187551617622375,
+            "fid_covariance_component": 0.0768651928884625,
+            "intra_class_diversity": 0.34476912021636963,
+            "target_nll": 0.15360742807388306,
+            "target_probability": 0.9319971799850464,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.014000000432133675
+          },
+          {
+            "class": 8,
+            "class_fid": 0.49638367155563357,
+            "conditional_accuracy": 0.20999999344348907,
+            "fid_centroid_component": 0.4394564628601074,
+            "fid_covariance_component": 0.056927208695526144,
+            "intra_class_diversity": 0.3588052988052368,
+            "target_nll": 5.4055399894714355,
+            "target_probability": 0.20453019440174103,
+            "top_wrong_class": 1,
+            "top_wrong_fraction": 0.4259999990463257
+          },
+          {
+            "class": 9,
+            "class_fid": 0.3893599979967996,
+            "conditional_accuracy": 0.257999986410141,
+            "fid_centroid_component": 0.335920125246048,
+            "fid_covariance_component": 0.05343987275075163,
+            "intra_class_diversity": 0.3433087170124054,
+            "target_nll": 3.6168720722198486,
+            "target_probability": 0.2467268407344818,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.20000000298023224
+          }
+        ],
+        "counts": {
+          "accuracy_improved_classes": [
+            2,
+            3,
+            4,
+            6,
+            8
+          ],
+          "class_fid_improved_classes": [
+            3,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "diversity_improved_classes": [
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "hybrid": [
+          {
+            "class": 0,
+            "class_fid": 0.4435159264482056,
+            "conditional_accuracy": 0.7360000014305115,
+            "fid_centroid_component": 0.3628140389919281,
+            "fid_covariance_component": 0.08070188745627749,
+            "intra_class_diversity": 0.41823235154151917,
+            "target_nll": 0.9689157605171204,
+            "target_probability": 0.721765398979187,
+            "top_wrong_class": 9,
+            "top_wrong_fraction": 0.0860000029206276
+          },
+          {
+            "class": 1,
+            "class_fid": 0.22139768958259637,
+            "conditional_accuracy": 0.8960000276565552,
+            "fid_centroid_component": 0.1725885272026062,
+            "fid_covariance_component": 0.04880916237999017,
+            "intra_class_diversity": 0.32760512828826904,
+            "target_nll": 0.34311196208000183,
+            "target_probability": 0.8645455241203308,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.04399999976158142
+          },
+          {
+            "class": 2,
+            "class_fid": 0.39796350034269196,
+            "conditional_accuracy": 0.8980000019073486,
+            "fid_centroid_component": 0.3171766996383667,
+            "fid_covariance_component": 0.08078680070432526,
+            "intra_class_diversity": 0.37244293093681335,
+            "target_nll": 0.3909699022769928,
+            "target_probability": 0.8622211813926697,
+            "top_wrong_class": 9,
+            "top_wrong_fraction": 0.02800000086426735
+          },
+          {
+            "class": 3,
+            "class_fid": 0.2792518859431266,
+            "conditional_accuracy": 0.878000020980835,
+            "fid_centroid_component": 0.23261000216007233,
+            "fid_covariance_component": 0.04664188378305428,
+            "intra_class_diversity": 0.38794323801994324,
+            "target_nll": 0.42072075605392456,
+            "target_probability": 0.8656490445137024,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.05400000140070915
+          },
+          {
+            "class": 4,
+            "class_fid": 0.22603709323827018,
+            "conditional_accuracy": 0.9359999895095825,
+            "fid_centroid_component": 0.1584860235452652,
+            "fid_covariance_component": 0.06755106969300498,
+            "intra_class_diversity": 0.3680538833141327,
+            "target_nll": 0.2312847226858139,
+            "target_probability": 0.9153128862380981,
+            "top_wrong_class": 7,
+            "top_wrong_fraction": 0.02800000086426735
+          },
+          {
+            "class": 5,
+            "class_fid": 0.23146586976066708,
+            "conditional_accuracy": 0.8740000128746033,
+            "fid_centroid_component": 0.180755615234375,
+            "fid_covariance_component": 0.050710254526292076,
+            "intra_class_diversity": 0.4152196943759918,
+            "target_nll": 0.5399361252784729,
+            "target_probability": 0.8578357100486755,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.05999999865889549
+          },
+          {
+            "class": 6,
+            "class_fid": 0.25127974475042036,
+            "conditional_accuracy": 0.7799999713897705,
+            "fid_centroid_component": 0.20638267695903778,
+            "fid_covariance_component": 0.04489706779138258,
+            "intra_class_diversity": 0.3847024738788605,
+            "target_nll": 1.020216464996338,
+            "target_probability": 0.759779691696167,
+            "top_wrong_class": 5,
+            "top_wrong_fraction": 0.1120000034570694
+          },
+          {
+            "class": 7,
+            "class_fid": 0.23352316245682195,
+            "conditional_accuracy": 0.9179999828338623,
+            "fid_centroid_component": 0.15549641847610474,
+            "fid_covariance_component": 0.07802674398071721,
+            "intra_class_diversity": 0.3560425341129303,
+            "target_nll": 0.3162519037723541,
+            "target_probability": 0.8918336033821106,
+            "top_wrong_class": 9,
+            "top_wrong_fraction": 0.03200000151991844
+          },
+          {
+            "class": 8,
+            "class_fid": 0.44713110207767415,
+            "conditional_accuracy": 0.38199999928474426,
+            "fid_centroid_component": 0.3910849392414093,
+            "fid_covariance_component": 0.056046162836264846,
+            "intra_class_diversity": 0.3639785647392273,
+            "target_nll": 3.1679232120513916,
+            "target_probability": 0.37515953183174133,
+            "top_wrong_class": 2,
+            "top_wrong_fraction": 0.27799999713897705
+          },
+          {
+            "class": 9,
+            "class_fid": 0.32300939631257714,
+            "conditional_accuracy": 0.18799999356269836,
+            "fid_centroid_component": 0.2743450105190277,
+            "fid_covariance_component": 0.048664385793549425,
+            "intra_class_diversity": 0.36031898856163025,
+            "target_nll": 4.940269470214844,
+            "target_probability": 0.18616491556167603,
+            "top_wrong_class": 3,
+            "top_wrong_fraction": 0.24400000274181366
+          }
+        ],
+        "hybrid_minus_classical": [
+          {
+            "class": 0,
+            "class_fid": 0.020406043927990947,
+            "conditional_accuracy": -0.1420000195503235,
+            "fid_centroid_component": 0.016163557767868042,
+            "fid_covariance_component": 0.004242486160122905,
+            "intra_class_diversity": -0.0048656165599823,
+            "target_nll": 0.5828229188919067,
+            "target_probability": -0.1363741159439087
+          },
+          {
+            "class": 1,
+            "class_fid": 0.058247842768786806,
+            "conditional_accuracy": -0.059999942779541016,
+            "fid_centroid_component": 0.056502342224121094,
+            "fid_covariance_component": 0.0017455005446657124,
+            "intra_class_diversity": 0.008798599243164062,
+            "target_nll": 0.18235339224338531,
+            "target_probability": -0.06501853466033936
+          },
+          {
+            "class": 2,
+            "class_fid": 0.025266916522507565,
+            "conditional_accuracy": 0.0339999794960022,
+            "fid_centroid_component": 0.02304735779762268,
+            "fid_covariance_component": 0.0022195587248848847,
+            "intra_class_diversity": 0.006585210561752319,
+            "target_nll": -0.10081762075424194,
+            "target_probability": 0.03957831859588623
+          },
+          {
+            "class": 3,
+            "class_fid": -0.019209127101453782,
+            "conditional_accuracy": 0.0020000338554382324,
+            "fid_centroid_component": -0.011526688933372498,
+            "fid_covariance_component": -0.007682438168081285,
+            "intra_class_diversity": 0.015706002712249756,
+            "target_nll": -0.024370670318603516,
+            "target_probability": 0.00522458553314209
+          },
+          {
+            "class": 4,
+            "class_fid": 0.0066674598353932135,
+            "conditional_accuracy": 0.05799996852874756,
+            "fid_centroid_component": 0.007804974913597107,
+            "fid_covariance_component": -0.0011375150782038934,
+            "intra_class_diversity": -0.004681587219238281,
+            "target_nll": -0.18899662792682648,
+            "target_probability": 0.06079995632171631
+          },
+          {
+            "class": 5,
+            "class_fid": -0.04254543654281945,
+            "conditional_accuracy": -0.0059999823570251465,
+            "fid_centroid_component": -0.034190356731414795,
+            "fid_covariance_component": -0.008355079811404653,
+            "intra_class_diversity": 0.03046494722366333,
+            "target_nll": 0.09001871943473816,
+            "target_probability": -0.0006223320960998535
+          },
+          {
+            "class": 6,
+            "class_fid": -0.002206024004902829,
+            "conditional_accuracy": 0.041999995708465576,
+            "fid_centroid_component": -0.004179507493972778,
+            "fid_covariance_component": 0.0019734834890699493,
+            "intra_class_diversity": 0.003894805908203125,
+            "target_nll": -0.21600031852722168,
+            "target_probability": 0.052649855613708496
+          },
+          {
+            "class": 7,
+            "class_fid": -0.005217546607864304,
+            "conditional_accuracy": -0.041999995708465576,
+            "fid_centroid_component": -0.0063790977001190186,
+            "fid_covariance_component": 0.0011615510922547145,
+            "intra_class_diversity": 0.011273413896560669,
+            "target_nll": 0.16264447569847107,
+            "target_probability": -0.04016357660293579
+          },
+          {
+            "class": 8,
+            "class_fid": -0.04925256947795942,
+            "conditional_accuracy": 0.1720000058412552,
+            "fid_centroid_component": -0.04837152361869812,
+            "fid_covariance_component": -0.000881045859261298,
+            "intra_class_diversity": 0.0051732659339904785,
+            "target_nll": -2.237616777420044,
+            "target_probability": 0.1706293374300003
+          },
+          {
+            "class": 9,
+            "class_fid": -0.06635060168422247,
+            "conditional_accuracy": -0.06999999284744263,
+            "fid_centroid_component": -0.061575114727020264,
+            "fid_covariance_component": -0.004775486957202202,
+            "intra_class_diversity": 0.017010271549224854,
+            "target_nll": 1.3233973979949951,
+            "target_probability": -0.060561925172805786
+          }
+        ],
+        "independent_classifier_prediction_disagreement": 0.28119999170303345,
+        "mean_hybrid_minus_classical": {
+          "class_fid": -0.0074193042364543715,
+          "conditional_accuracy": -0.00119999498128891,
+          "fid_centroid_component": -0.006270405650138855,
+          "fid_covariance_component": -0.0011488985863155165,
+          "intra_class_diversity": 0.0089359313249588,
+          "target_nll": -0.042656511068344116,
+          "target_probability": 0.0026141569018363954
+        },
+        "paired_image_rmse": 0.33114898204803467
+      },
+      "seed": 202,
+      "teacher_scores": {
+        "classical_generator": {
+          "effective_centered_logit_perturbation_ratio": 0.02807411551475525,
+          "hybrid": {
+            "centered_logit_rms": 3.736920118331909,
+            "cross_entropy": 1.0498712062835693,
+            "mean_target_margin": 0.8669021725654602,
+            "requested_class_accuracy": 0.6480000019073486
+          },
+          "hybrid_change_beneficial_for_requested_label": 0.004999999888241291,
+          "hybrid_change_harmful_for_requested_label": 0.007000000216066837,
+          "hybrid_changed_kde_and_matches_independent_classifier": 0.006000000052154064,
+          "hybrid_changed_kde_fraction": 0.01600000075995922,
+          "kde": {
+            "centered_logit_rms": 3.850722312927246,
+            "cross_entropy": 1.0508583784103394,
+            "mean_target_margin": 0.8793224096298218,
+            "requested_class_accuracy": 0.6499999761581421
+          },
+          "kde_quantum_prediction_agreement": 0.7009999752044678,
+          "quantum": {
+            "centered_logit_rms": 2.054007053375244,
+            "cross_entropy": 1.3407024145126343,
+            "mean_target_margin": 0.1713264435529709,
+            "requested_class_accuracy": 0.5600000023841858
+          }
+        },
+        "hybrid_generator": {
+          "effective_centered_logit_perturbation_ratio": 0.028053442016243935,
+          "hybrid": {
+            "centered_logit_rms": 3.915863513946533,
+            "cross_entropy": 1.05064058303833,
+            "mean_target_margin": 0.9494256377220154,
+            "requested_class_accuracy": 0.6819999814033508
+          },
+          "hybrid_change_beneficial_for_requested_label": 0.0020000000949949026,
+          "hybrid_change_harmful_for_requested_label": 0.0,
+          "hybrid_changed_kde_and_matches_independent_classifier": 0.0020000000949949026,
+          "hybrid_changed_kde_fraction": 0.007000000216066837,
+          "kde": {
+            "centered_logit_rms": 4.036097049713135,
+            "cross_entropy": 1.0583332777023315,
+            "mean_target_margin": 0.9555484652519226,
+            "requested_class_accuracy": 0.6800000071525574
+          },
+          "kde_quantum_prediction_agreement": 0.7429999709129333,
+          "quantum": {
+            "centered_logit_rms": 2.1513025760650635,
+            "cross_entropy": 1.2031023502349854,
+            "mean_target_margin": 0.3875249922275543,
+            "requested_class_accuracy": 0.6150000095367432
+          }
+        }
+      },
+      "trajectory_divergence": {
+        "final_parameter_distance": {
+          "l2": 3.8986363410949707,
+          "parameter_cosine": 0.9942814707756042,
+          "relative_to_classical_parameter_norm": 0.10844262689352036
+        },
+        "final_to_first_difference_amplification": 536.8868990740782,
+        "first_update_hybrid_minus_kde_l2": 0.007261559832841158,
+        "logged_steps": 200,
+        "metrics": {
+          "discriminator.total": {
+            "first_difference_step": 2,
+            "maximum_absolute_difference": 0.5079159736633301,
+            "root_mean_square_difference": 0.08009157827665835,
+            "step_1": {
+              "absolute_difference": 0.0,
+              "classical": 3.558840274810791,
+              "hybrid": 3.558840274810791
+            }
+          },
+          "generator.adversarial": {
+            "first_difference_step": 2,
+            "maximum_absolute_difference": 1.7043259143829346,
+            "root_mean_square_difference": 0.4558377321275134,
+            "step_1": {
+              "absolute_difference": 0.0,
+              "classical": 0.6966116428375244,
+              "hybrid": 0.6966116428375244
+            }
+          },
+          "generator.auxiliary": {
+            "first_difference_step": 2,
+            "maximum_absolute_difference": 0.11076930910348892,
+            "root_mean_square_difference": 0.021897770553628654,
+            "step_1": {
+              "absolute_difference": 0.0,
+              "classical": 2.301151990890503,
+              "hybrid": 2.301151990890503
+            }
+          },
+          "generator.regularizer": {
+            "first_difference_step": 1,
+            "maximum_absolute_difference": 1.8715095520019531,
+            "root_mean_square_difference": 0.4660443938049694,
+            "step_1": {
+              "absolute_difference": 1.8715095520019531,
+              "classical": 38.76936721801758,
+              "hybrid": 36.897857666015625
+            }
+          }
+        }
+      }
+    }
+  ],
+  "reference_samples_per_class": 1024,
+  "regularizer_trainable_parameters": 0,
+  "schema_version": 1,
+  "score_samples": 1000
+}

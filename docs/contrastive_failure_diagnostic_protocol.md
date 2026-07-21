@@ -104,3 +104,24 @@ These measurements may identify why this implementation failed. They cannot prov
 trainable quantum generator branch or every quantum-assisted distribution loss will fail. Any new
 mechanism proposed from this analysis must receive new development data, a matched classical
 control that preserves logit scale, and a new untouched evaluation sequence.
+
+## Completed execution
+
+The diagnostic was executed with tooling revision `1be4a48e`, 5,000 evaluation samples, 1,000
+score samples, and 100 fixed balanced gradient samples. The machine-readable result is
+[`contrastive_failure_diagnostic_results.json`](contrastive_failure_diagnostic_results.json), and
+the interpreted mechanism report is
+[`contrastive_failure_diagnosis.md`](contrastive_failure_diagnosis.md).
+
+```bash
+uv run python scripts/diagnose_contrastive_stage1.py \
+  --classical-checkpoints \
+    runs/seed-101/classical/checkpoint-final.pt \
+    runs/seed-202/classical/checkpoint-final.pt \
+  --hybrid-checkpoints \
+    runs/seed-101/hybrid/checkpoint-final.pt \
+    runs/seed-202/hybrid/checkpoint-final.pt \
+  --classifier mnist_classifier.pth \
+  --dataset-root data \
+  --output contrastive-failure-diagnostic.json
+```
