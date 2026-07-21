@@ -11,6 +11,8 @@ from vqe_gan.training import (
     discriminator_step,
     distribution_regularized_generator_step,
     generator_step,
+    measure_relational_gradient_diagnostics,
+    relational_coverage_generator_step,
 )
 
 
@@ -159,6 +161,20 @@ class DecomposedMeanMatchingRegularizer(nn.Module):
         return classical, quantum
 
 
+class RelationalMeanMatchingRegularizer(nn.Module):
+    def loss_components(
+        self,
+        generated: Tensor,
+        angle_residuals: Tensor,
+        real: Tensor,
+        class_labels: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        del class_labels
+        kde = (generated.mean(dim=0) - real.mean(dim=0)).square().mean()
+        coverage = kde + angle_residuals.square().mean()
+        return kde, coverage
+
+
 def test_distribution_step_updates_only_the_generator_with_balanced_gradient() -> None:
     generator, discriminator, noise, labels, real_images = _models_and_batch()
     optimizer = torch.optim.Adam(generator.parameters(), lr=2e-4)
@@ -221,3 +237,65 @@ def test_coherence_guidance_has_separate_bounded_gradient_budget() -> None:
     for name, value in discriminator.state_dict().items():
         torch.testing.assert_close(value, discriminator_state[name])
     assert all(parameter.grad is None for parameter in discriminator.parameters())
+
+
+def test_relational_coverage_step_updates_the_angle_head_separately_from_kde() -> None:
+    generator, discriminator, noise, labels, real_images = _models_and_batch()
+    optimizer = torch.optim.Adam(generator.parameters(), lr=2e-4)
+    angle_state = {
+        name: value.detach().clone() for name, value in generator.angle_head.state_dict().items()
+    }
+    discriminator_state = {
+        name: value.detach().clone() for name, value in discriminator.state_dict().items()
+    }
+
+    metrics = relational_coverage_generator_step(
+        generator,
+        discriminator,
+        RelationalMeanMatchingRegularizer(),
+        optimizer,
+        real_images,
+        noise,
+        labels,
+        kde_weight=2e-5,
+        coverage_weight=0.01,
+    )
+
+    assert metrics.classical_regularizer is not None
+    assert metrics.coverage_regularizer is not None
+    assert metrics.effective_regularizer_weight == 2e-5
+    assert metrics.effective_coverage_weight == 0.01
+    assert any(
+        not torch.equal(angle_state[name], value)
+        for name, value in generator.angle_head.state_dict().items()
+    )
+    for name, value in discriminator.state_dict().items():
+        torch.testing.assert_close(value, discriminator_state[name])
+    assert all(parameter.grad is None for parameter in discriminator.parameters())
+
+
+def test_relational_diagnostics_separate_direct_and_angle_head_paths() -> None:
+    generator, discriminator, noise, labels, real_images = _models_and_batch()
+    generator_state = {
+        name: value.detach().clone() for name, value in generator.state_dict().items()
+    }
+
+    diagnostics = measure_relational_gradient_diagnostics(
+        generator,
+        discriminator,
+        RelationalMeanMatchingRegularizer(),
+        real_images,
+        noise,
+        labels,
+        kde_weight=2e-5,
+        coverage_weight=0.01,
+    )
+
+    assert diagnostics.gan_objective_norm > 0
+    assert diagnostics.kde_norm > 0
+    assert diagnostics.coverage_shared_norm > 0
+    assert diagnostics.coverage_angle_head_norm > 0
+    assert diagnostics.direct_coverage_shared_norm > 0
+    assert diagnostics.weighted_coverage_to_gan_norm_ratio > 0
+    for name, value in generator.state_dict().items():
+        torch.testing.assert_close(value, generator_state[name])

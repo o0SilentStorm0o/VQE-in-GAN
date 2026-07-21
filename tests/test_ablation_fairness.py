@@ -13,6 +13,7 @@ def _config(variant: ExperimentVariant) -> ExperimentConfig:
         run_name=variant.value,
         variant=variant,
         regularizer_weight=0.0 if variant is ExperimentVariant.NO_REGULARIZER else 0.1,
+        coverage_weight=0.1 if variant.uses_relational_coverage else 0.0,
     )
 
 
@@ -85,3 +86,30 @@ def test_reference_bank_uses_equal_first_examples_per_class() -> None:
     expected_indices = torch.tensor([0, 2, 1, 4, 3, 5])
     torch.testing.assert_close(selected_images, images[expected_indices])
     torch.testing.assert_close(torch.get_rng_state(), rng_state)
+
+
+def test_relational_variants_start_from_identical_image_paths_and_zero_residuals() -> None:
+    classical_config = _config(ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE)
+    quantum_config = _config(ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE)
+    torch.manual_seed(83)
+    classical_generator, _, _ = _build_models(
+        classical_config,
+        torch.device("cpu"),
+        None,
+    )
+    torch.manual_seed(83)
+    quantum_generator, _, _ = _build_models(
+        quantum_config,
+        torch.device("cpu"),
+        torch.device("cpu"),
+    )
+
+    for module_name in ("label_embedding", "input_projection", "image_decoder"):
+        classical_state = getattr(classical_generator, module_name).state_dict()
+        quantum_state = getattr(quantum_generator, module_name).state_dict()
+        for name in classical_state:
+            torch.testing.assert_close(classical_state[name], quantum_state[name], atol=0, rtol=0)
+    for generator in (classical_generator, quantum_generator):
+        output_layer = generator.angle_head[-2]
+        assert torch.count_nonzero(output_layer.weight) == 0
+        assert torch.count_nonzero(output_layer.bias) == 0

@@ -10,7 +10,11 @@ from torch import Tensor
 
 from vqe_gan.models import ACGANDiscriminator, SharedQuantumGenerator
 from vqe_gan.quantum.losses import contrastive_energy_loss
-from vqe_gan.training.steps import AllClassEnergyModel, ImageDistributionRegularizer
+from vqe_gan.training.steps import (
+    AllClassEnergyModel,
+    ImageDistributionRegularizer,
+    RelationalCoverageRegularizer,
+)
 
 
 @dataclass(frozen=True)
@@ -31,6 +35,26 @@ class GradientDiagnostics:
     regularizer_accuracy: float | None
     zero_noise_regularizer_accuracy: float | None
     angle_noise_sensitivity: float | None
+
+
+@dataclass(frozen=True)
+class RelationalGradientDiagnostics:
+    gan_objective_norm: float
+    kde_norm: float
+    coverage_shared_norm: float
+    coverage_angle_head_norm: float
+    direct_coverage_shared_norm: float
+    indirect_coverage_shared_norm: float
+    direct_to_full_coverage_norm_ratio: float
+    weighted_kde_to_gan_norm_ratio: float
+    weighted_coverage_to_gan_norm_ratio: float
+    kde_gan_cosine: float | None
+    coverage_gan_cosine: float | None
+    coverage_kde_cosine: float | None
+    direct_full_coverage_cosine: float | None
+    kde_loss: float
+    coverage_loss: float
+    angle_residual_rms: float
 
 
 def measure_gradient_diagnostics(
@@ -291,6 +315,115 @@ def measure_distribution_gradient_diagnostics(
         regularizer_accuracy=None,
         zero_noise_regularizer_accuracy=None,
         angle_noise_sensitivity=None,
+    )
+
+
+def measure_relational_gradient_diagnostics(
+    generator: SharedQuantumGenerator,
+    discriminator: ACGANDiscriminator,
+    regularizer_model: RelationalCoverageRegularizer,
+    real_images: Tensor,
+    noise: Tensor,
+    class_labels: Tensor,
+    *,
+    kde_weight: float,
+    coverage_weight: float,
+) -> RelationalGradientDiagnostics:
+    """Measure the additive KDE and coverage paths without changing model state."""
+
+    if kde_weight <= 0 or coverage_weight <= 0:
+        raise ValueError("KDE and coverage weights must be positive")
+    generator_was_training = generator.training
+    discriminator_was_training = discriminator.training
+    discriminator_requires_grad = [
+        parameter.requires_grad for parameter in discriminator.parameters()
+    ]
+    generator.eval()
+    discriminator.eval()
+    for parameter in discriminator.parameters():
+        parameter.requires_grad_(False)
+
+    shared_parameters = (
+        *generator.label_embedding.parameters(),
+        *generator.input_projection.parameters(),
+        *generator.image_decoder.parameters(),
+    )
+    angle_parameters = tuple(generator.angle_head.parameters())
+    try:
+        images, angle_residuals = generator.forward_with_angles(noise, class_labels)
+        kde_loss, coverage_loss = regularizer_model.loss_components(
+            images,
+            angle_residuals,
+            real_images,
+            class_labels,
+        )
+        _, direct_coverage_loss = regularizer_model.loss_components(
+            images,
+            angle_residuals.detach(),
+            real_images,
+            class_labels,
+        )
+        adversarial_logits, class_logits = discriminator(images)
+        gan_objective = functional.binary_cross_entropy_with_logits(
+            adversarial_logits,
+            torch.ones_like(adversarial_logits),
+        ) + functional.cross_entropy(class_logits, class_labels)
+
+        gan_gradients = _gradients(gan_objective, shared_parameters, retain_graph=True)
+        kde_gradients = _gradients(kde_loss, shared_parameters, retain_graph=True)
+        coverage_gradients = _gradients(
+            coverage_loss,
+            (*shared_parameters, *angle_parameters),
+            retain_graph=True,
+        )
+        direct_gradients = _gradients(
+            direct_coverage_loss,
+            shared_parameters,
+            retain_graph=False,
+        )
+    finally:
+        generator.train(generator_was_training)
+        discriminator.train(discriminator_was_training)
+        for parameter, requires_grad in zip(
+            discriminator.parameters(),
+            discriminator_requires_grad,
+            strict=True,
+        ):
+            parameter.requires_grad_(requires_grad)
+
+    coverage_shared = coverage_gradients[: len(shared_parameters)]
+    coverage_angle = coverage_gradients[len(shared_parameters) :]
+    indirect_gradients = tuple(
+        full - direct
+        for full, direct in zip(coverage_shared, direct_gradients, strict=True)
+    )
+    gan_norm = _norm(gan_gradients)
+    kde_norm = _norm(kde_gradients)
+    coverage_norm = _norm(coverage_shared)
+    direct_norm = _norm(direct_gradients)
+    return RelationalGradientDiagnostics(
+        gan_objective_norm=gan_norm,
+        kde_norm=kde_norm,
+        coverage_shared_norm=coverage_norm,
+        coverage_angle_head_norm=_norm(coverage_angle),
+        direct_coverage_shared_norm=direct_norm,
+        indirect_coverage_shared_norm=_norm(indirect_gradients),
+        direct_to_full_coverage_norm_ratio=(
+            direct_norm / coverage_norm if coverage_norm > 0 else 0.0
+        ),
+        weighted_kde_to_gan_norm_ratio=(
+            kde_weight * kde_norm / gan_norm if gan_norm > 0 else 0.0
+        ),
+        weighted_coverage_to_gan_norm_ratio=(
+            coverage_weight * coverage_norm / gan_norm if gan_norm > 0 else 0.0
+        ),
+        kde_gan_cosine=_cosine(kde_gradients, gan_gradients),
+        coverage_gan_cosine=_cosine(coverage_shared, gan_gradients),
+        coverage_kde_cosine=_cosine(coverage_shared, kde_gradients),
+        direct_full_coverage_cosine=_cosine(direct_gradients, coverage_shared),
+        kde_loss=kde_loss.detach().item(),
+        coverage_loss=coverage_loss.detach().item(),
+        angle_residual_rms=angle_residuals.detach().square().mean().sqrt().item(),
     )
 
 

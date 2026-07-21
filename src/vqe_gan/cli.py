@@ -47,6 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--kde-sigma-squared", type=float, default=0.03125)
     parser.add_argument("--kde-temperature", type=float, default=0.75)
     parser.add_argument("--quantum-mixture-weight", type=float, default=0.05)
+    parser.add_argument("--coverage-weight", type=float)
+    parser.add_argument("--coverage-temperature", type=float, default=0.10)
+    parser.add_argument("--angle-residual-fraction", type=float, default=0.10)
     parser.add_argument("--gradient-diagnostics-every-steps", type=int, default=0)
     parser.add_argument("--checkpoint-every-steps", type=int, default=0)
     parser.add_argument("--no-download", action="store_true")
@@ -58,6 +61,9 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
     regularizer_weight = arguments.regularizer_weight
     if regularizer_weight is None:
         regularizer_weight = variant.default_regularizer_weight
+    coverage_weight = arguments.coverage_weight
+    if coverage_weight is None:
+        coverage_weight = variant.default_coverage_weight
     return ExperimentConfig(
         run_name=arguments.run_name,
         output_root=arguments.output_root,
@@ -88,6 +94,9 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
         kde_sigma_squared=arguments.kde_sigma_squared,
         kde_temperature=arguments.kde_temperature,
         quantum_mixture_weight=arguments.quantum_mixture_weight,
+        coverage_weight=coverage_weight,
+        coverage_temperature=arguments.coverage_temperature,
+        angle_residual_fraction=arguments.angle_residual_fraction,
         gradient_diagnostics_every_steps=arguments.gradient_diagnostics_every_steps,
         checkpoint_every_steps=arguments.checkpoint_every_steps,
         download_dataset=not arguments.no_download,

@@ -23,6 +23,9 @@ class ExperimentVariant(str, Enum):
     QUANTUM_MODULAR_REFERENCE = "quantum_modular_reference"
     CLASSICAL_RBF_REFERENCE = "classical_rbf_reference"
     CLASSICAL_LOG_KDE_CONTRASTIVE = "classical_log_kde_contrastive"
+    CLASSICAL_LOG_KDE_SCALE_CONTROL = "classical_log_kde_scale_control"
+    CLASSICAL_KDE_RELATIONAL_COVERAGE = "classical_kde_relational_coverage"
+    QUANTUM_KDE_RELATIONAL_COVERAGE = "quantum_kde_relational_coverage"
     HYBRID_MODULAR_KDE_CONTRASTIVE = "hybrid_modular_kde_contrastive"
     HYBRID_MODULAR_KDE_PRODUCT = "hybrid_modular_kde_product"
     HYBRID_MODULAR_KDE_DEPHASED = "hybrid_modular_kde_dephased"
@@ -40,6 +43,9 @@ class ExperimentVariant(str, Enum):
             ExperimentVariant.QUANTUM_MODULAR_REFERENCE,
             ExperimentVariant.CLASSICAL_RBF_REFERENCE,
             ExperimentVariant.CLASSICAL_LOG_KDE_CONTRASTIVE,
+            ExperimentVariant.CLASSICAL_LOG_KDE_SCALE_CONTROL,
+            ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
             ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
             ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
             ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
@@ -57,6 +63,7 @@ class ExperimentVariant(str, Enum):
             ExperimentVariant.QUANTUM_DENSITY_MMD,
             ExperimentVariant.QUANTUM_COHERENCE_GUIDANCE,
             ExperimentVariant.QUANTUM_MODULAR_REFERENCE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
             ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
             ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
             ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
@@ -67,9 +74,19 @@ class ExperimentVariant(str, Enum):
         return self is ExperimentVariant.QUANTUM_COHERENCE_GUIDANCE
 
     @property
+    def uses_relational_coverage(self) -> bool:
+        return self in {
+            ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+        }
+
+    @property
     def uses_contrastive_reference(self) -> bool:
         return self in {
             ExperimentVariant.CLASSICAL_LOG_KDE_CONTRASTIVE,
+            ExperimentVariant.CLASSICAL_LOG_KDE_SCALE_CONTROL,
+            ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
             ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
             ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
             ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
@@ -79,9 +96,17 @@ class ExperimentVariant(str, Enum):
     def default_regularizer_weight(self) -> float:
         if self is ExperimentVariant.NO_REGULARIZER:
             return 0.0
+        if self is ExperimentVariant.CLASSICAL_LOG_KDE_SCALE_CONTROL:
+            return 1.9e-5
         if self.uses_contrastive_reference:
             return 2e-5
         return 1.0
+
+    @property
+    def default_coverage_weight(self) -> float:
+        """Return zero until the preregistered development calibration is committed."""
+
+        return 0.0
 
 
 @dataclass(frozen=True)
@@ -127,6 +152,9 @@ class ExperimentConfig:
     kde_sigma_squared: float = 0.03125
     kde_temperature: float = 0.75
     quantum_mixture_weight: float = 0.05
+    coverage_weight: float = 0.0
+    coverage_temperature: float = 0.10
+    angle_residual_fraction: float = 0.10
     gradient_diagnostics_every_steps: int = 0
     log_every_steps: int = 1
     checkpoint_every_steps: int = 0
@@ -196,6 +224,10 @@ class ExperimentConfig:
             raise ValueError("KDE sigma and temperature must be positive")
         if not 0 <= self.quantum_mixture_weight <= 1:
             raise ValueError("quantum_mixture_weight must be in [0, 1]")
+        if self.coverage_weight < 0 or self.coverage_temperature <= 0:
+            raise ValueError("coverage weight must be non-negative and temperature positive")
+        if not 0 < self.angle_residual_fraction <= 1:
+            raise ValueError("angle_residual_fraction must be in (0, 1]")
         if self.variant is ExperimentVariant.NO_REGULARIZER and self.regularizer_weight != 0:
             raise ValueError("no_regularizer requires regularizer_weight=0")
         if (
@@ -207,6 +239,10 @@ class ExperimentConfig:
             raise ValueError("contrastive reference variants require a fixed calibrated weight")
         if self.variant is not ExperimentVariant.NO_REGULARIZER and self.regularizer_weight <= 0:
             raise ValueError("regularized variants require a positive regularizer_weight")
+        if self.variant.uses_relational_coverage and self.coverage_weight <= 0:
+            raise ValueError("relational coverage variants require a calibrated coverage_weight")
+        if not self.variant.uses_relational_coverage and self.coverage_weight != 0:
+            raise ValueError("coverage_weight is only valid for relational coverage variants")
 
     @property
     def output_directory(self) -> Path:

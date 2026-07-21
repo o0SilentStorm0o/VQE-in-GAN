@@ -26,12 +26,14 @@ from vqe_gan.regularizers import (
     ClassConditionalRBFReferenceMMD,
     ClassicalPrototypeEnergy,
     HybridQuantumKDEContrastiveReference,
+    KDERelationalCoverageReference,
     ModularAblation,
     PermutedClassEnergy,
     QuantumDensityMMD,
     QuantumModularFreeEnergy,
     QuantumModularReference,
     RBFQuantumCoherenceGuidance,
+    RelationalKernel,
 )
 from vqe_gan.reproducibility import (
     collect_provenance,
@@ -46,6 +48,7 @@ from vqe_gan.training import (
     generator_step,
     measure_distribution_gradient_diagnostics,
     measure_gradient_diagnostics,
+    relational_coverage_generator_step,
 )
 
 
@@ -91,7 +94,8 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
         QuantumModularReference
         | ClassConditionalRBFReferenceMMD
         | ClassConditionalLogKDEReference
-        | HybridQuantumKDEContrastiveReference,
+        | HybridQuantumKDEContrastiveReference
+        | KDERelationalCoverageReference,
     ):
         samples_per_class = (
             config.contrastive_reference_samples_per_class
@@ -108,7 +112,13 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
         provenance["reference_samples_per_class"] = reference_count
     provenance["regularizer_weight"] = config.regularizer_weight
     provenance["regularizer_gradient_ratio"] = config.regularizer_gradient_ratio
-    if config.variant.uses_contrastive_reference:
+    provenance["coverage_weight"] = config.coverage_weight
+    if config.variant.uses_relational_coverage:
+        provenance["regularizer_weight_calibration"] = (
+            "unchanged_kde_plus_fixed_coverage_from_development_seeds_42_43"
+        )
+        provenance["coverage_calibration_target_gradient_ratio"] = 0.01
+    elif config.variant.uses_contrastive_reference:
         provenance["regularizer_weight_calibration"] = (
             "fixed_from_initial_gradient_norms_on_development_seeds_42_43"
         )
@@ -169,6 +179,10 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
                     # The projected classical/quantum gradient interaction is
                     # logged directly by coherence_guided_generator_step.
                     pass
+                elif config.variant.uses_relational_coverage:
+                    # Component-specific diagnostics are produced by the
+                    # relational calibration and post-run audit tools.
+                    pass
                 elif config.variant.uses_distribution_regularizer:
                     assert regularizer_model is not None
                     gradient_diagnostics = measure_distribution_gradient_diagnostics(
@@ -205,6 +219,19 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
                     regularizer_weight=config.regularizer_weight,
                     regularizer_gradient_ratio=config.regularizer_gradient_ratio,
                     coherence_gradient_ratio=config.coherence_gradient_ratio,
+                )
+            elif config.variant.uses_relational_coverage:
+                assert regularizer_model is not None
+                generator_metrics = relational_coverage_generator_step(
+                    generator,
+                    discriminator,
+                    regularizer_model,
+                    generator_optimizer,
+                    real_images,
+                    generator_noise,
+                    generator_labels,
+                    kde_weight=config.regularizer_weight,
+                    coverage_weight=config.coverage_weight,
                 )
             elif config.variant.uses_distribution_regularizer:
                 assert regularizer_model is not None
@@ -420,13 +447,39 @@ def _build_models(
             execution_device=execution_device,
             sigma_squared=config.rbf_sigma_squared,
         )
-    elif config.variant is ExperimentVariant.CLASSICAL_LOG_KDE_CONTRASTIVE:
+    elif config.variant in {
+        ExperimentVariant.CLASSICAL_LOG_KDE_CONTRASTIVE,
+        ExperimentVariant.CLASSICAL_LOG_KDE_SCALE_CONTROL,
+    }:
         execution_device = torch.device("cpu") if device.type == "mps" else device
         regularizer_model = ClassConditionalLogKDEReference(
             num_classes=config.num_classes,
             execution_device=execution_device,
             sigma_squared=config.kde_sigma_squared,
             temperature=config.kde_temperature,
+        )
+    elif config.variant in {
+        ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
+        ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+    }:
+        if config.variant is ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE:
+            assert quantum_device is not None
+            execution_device = quantum_device
+            kernel = RelationalKernel.QUANTUM_FULL
+        else:
+            execution_device = torch.device("cpu") if device.type == "mps" else device
+            kernel = RelationalKernel.CLASSICAL_PERIODIC_RBF
+        _zero_angle_residual_output(generator)
+        regularizer_model = KDERelationalCoverageReference(
+            circuit_spec,
+            num_classes=config.num_classes,
+            execution_device=execution_device,
+            angle_scale=config.contrastive_angle_scale,
+            angle_residual_fraction=config.angle_residual_fraction,
+            coverage_temperature=config.coverage_temperature,
+            kde_sigma_squared=config.kde_sigma_squared,
+            kde_temperature=config.kde_temperature,
+            kernel=kernel,
         )
     elif config.variant in {
         ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
@@ -460,6 +513,7 @@ def _fit_reference_regularizer(
         | ClassConditionalRBFReferenceMMD
         | ClassConditionalLogKDEReference
         | HybridQuantumKDEContrastiveReference
+        | KDERelationalCoverageReference
     ),
     dataset: Dataset,
     *,
@@ -473,6 +527,21 @@ def _fit_reference_regularizer(
     )
     regularizer.fit_reference(images, labels)
     return actual_count
+
+
+def _zero_angle_residual_output(generator: SharedQuantumGenerator) -> None:
+    """Start additive angle residuals at the deterministic image encoding."""
+
+    output_layer = generator.angle_head[-2]
+    if not isinstance(output_layer, torch.nn.Linear) or not getattr(
+        output_layer,
+        "is_angle_output",
+        False,
+    ):
+        raise RuntimeError("generator angle output layer is not identifiable")
+    with torch.no_grad():
+        output_layer.weight.zero_()
+        output_layer.bias.zero_()
 
 
 def _balanced_reference_batch(

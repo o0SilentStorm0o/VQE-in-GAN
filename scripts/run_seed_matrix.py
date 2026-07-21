@@ -31,6 +31,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--evaluation-samples", type=int, default=5_000)
+    parser.add_argument("--coverage-weight", type=float)
     parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default="cuda")
     parser.add_argument("--quantum-device", choices=("same", "cpu"), default="cpu")
     parser.add_argument(
@@ -77,6 +78,12 @@ def main() -> None:
                 if variant is ExperimentVariant.NO_REGULARIZER
                 or variant.uses_contrastive_reference
                 else 0.1
+            ),
+            coverage_weight=(
+                arguments.coverage_weight
+                if arguments.coverage_weight is not None
+                and variant.uses_relational_coverage
+                else variant.default_coverage_weight
             ),
             download_dataset=False,
         )

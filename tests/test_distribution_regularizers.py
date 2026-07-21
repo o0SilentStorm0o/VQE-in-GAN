@@ -7,6 +7,7 @@ from vqe_gan.regularizers import (
     ClassConditionalRBFMMD,
     ClassConditionalRBFReferenceMMD,
     HybridQuantumKDEContrastiveReference,
+    KDERelationalCoverageReference,
     ModularAblation,
     QuantumCoherenceResidual,
     QuantumDensityMMD,
@@ -14,6 +15,8 @@ from vqe_gan.regularizers import (
     QuantumModularFreeEnergy,
     QuantumModularReference,
     RBFQuantumCoherenceGuidance,
+    RelationalKernel,
+    TrainableRelationalCoverageReference,
 )
 
 
@@ -171,3 +174,93 @@ def test_contrastive_quantum_ablations_preserve_the_fixed_pixel_assignment() -> 
             ablation=ablation,
         )
         torch.testing.assert_close(regularizer.pixel_permutation.cpu(), expected)
+
+
+def test_trainable_relational_coverage_reaches_images_and_angle_residuals() -> None:
+    generated, real, labels = _batch()
+    angle_residuals = torch.zeros(6, 16, requires_grad=True)
+    regularizer = TrainableRelationalCoverageReference(num_classes=3)
+    regularizer.fit_reference(real, labels)
+
+    loss = regularizer(generated, angle_residuals, labels)
+    loss.backward()
+
+    assert loss.isfinite()
+    assert generated.grad is not None
+    assert torch.count_nonzero(generated.grad) > 0
+    assert angle_residuals.grad is not None
+    assert torch.count_nonzero(angle_residuals.grad) > 0
+    assert sum(parameter.numel() for parameter in regularizer.parameters()) == 0
+
+
+def test_zero_relational_residual_reproduces_fixed_image_angles() -> None:
+    generated, real, labels = _batch()
+    del real, labels
+    regularizer = TrainableRelationalCoverageReference(num_classes=3)
+    residuals = torch.zeros(generated.shape[0], 16)
+
+    torch.testing.assert_close(
+        regularizer.generated_angles(generated, residuals),
+        regularizer.base_angles(generated),
+        atol=0,
+        rtol=0,
+    )
+
+
+def test_matched_classical_coverage_uses_fitted_periodic_bandwidth() -> None:
+    generated, real, labels = _batch()
+    residuals = torch.zeros(6, 16, requires_grad=True)
+    regularizer = TrainableRelationalCoverageReference(
+        num_classes=3,
+        kernel=RelationalKernel.CLASSICAL_PERIODIC_RBF,
+    )
+    regularizer.fit_reference(real, labels)
+
+    loss = regularizer(generated, residuals, labels)
+    loss.backward()
+
+    assert regularizer.classical_sigma_squared.isfinite()
+    assert regularizer.classical_sigma_squared > 0
+    assert generated.grad is not None
+    assert torch.count_nonzero(generated.grad) > 0
+    assert residuals.grad is not None
+    assert torch.count_nonzero(residuals.grad) > 0
+
+
+def test_relational_full_product_and_dephased_controls_are_distinguishable() -> None:
+    generated, real, labels = _batch()
+    residuals = torch.zeros(6, 16)
+    losses = []
+    for kernel in (
+        RelationalKernel.QUANTUM_FULL,
+        RelationalKernel.QUANTUM_PRODUCT,
+        RelationalKernel.QUANTUM_DEPHASED,
+    ):
+        regularizer = TrainableRelationalCoverageReference(
+            num_classes=3,
+            kernel=kernel,
+        )
+        regularizer.fit_reference(real, labels)
+        losses.append(regularizer(generated, residuals, labels))
+
+    assert not torch.isclose(losses[0], losses[1], atol=1e-7, rtol=0)
+    assert not torch.isclose(losses[0], losses[2], atol=1e-7, rtol=0)
+
+
+def test_relational_wrapper_preserves_kde_component_exactly() -> None:
+    generated, real, labels = _batch()
+    residuals = torch.zeros(6, 16)
+    standalone = ClassConditionalLogKDEReference(num_classes=3)
+    guidance = KDERelationalCoverageReference(num_classes=3)
+    standalone.fit_reference(real, labels)
+    guidance.fit_reference(real, labels)
+
+    expected = standalone(generated, real, labels)
+    actual, coverage = guidance.loss_components(generated, residuals, real, labels)
+    expected_gradient = torch.autograd.grad(expected, generated, retain_graph=True)[0]
+    actual_gradient = torch.autograd.grad(actual, generated, retain_graph=True)[0]
+
+    torch.testing.assert_close(actual, expected, atol=0, rtol=0)
+    assert torch.equal(actual_gradient, expected_gradient)
+    assert coverage.isfinite()
+    assert sum(parameter.numel() for parameter in guidance.parameters()) == 0

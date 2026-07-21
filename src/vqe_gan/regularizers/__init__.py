@@ -5,6 +5,7 @@ from .distribution import (
     ClassConditionalRBFMMD,
     ClassConditionalRBFReferenceMMD,
     HybridQuantumKDEContrastiveReference,
+    KDERelationalCoverageReference,
     ModularAblation,
     QuantumCoherenceResidual,
     QuantumDensityMMD,
@@ -12,6 +13,8 @@ from .distribution import (
     QuantumModularFreeEnergy,
     QuantumModularReference,
     RBFQuantumCoherenceGuidance,
+    RelationalKernel,
+    TrainableRelationalCoverageReference,
 )
 from .energy_models import ClassicalPrototypeEnergy, PermutedClassEnergy
 
@@ -21,6 +24,7 @@ __all__ = [
     "ClassConditionalRBFReferenceMMD",
     "ClassicalPrototypeEnergy",
     "HybridQuantumKDEContrastiveReference",
+    "KDERelationalCoverageReference",
     "ModularAblation",
     "PermutedClassEnergy",
     "QuantumCoherenceResidual",
@@ -29,4 +33,6 @@ __all__ = [
     "QuantumModularContrastiveReference",
     "QuantumModularReference",
     "RBFQuantumCoherenceGuidance",
+    "RelationalKernel",
+    "TrainableRelationalCoverageReference",
 ]

@@ -30,6 +30,16 @@ class CoherenceGuidanceRegularizer(Protocol):
     ) -> tuple[Tensor, Tensor]: ...
 
 
+class RelationalCoverageRegularizer(Protocol):
+    def loss_components(
+        self,
+        generated: Tensor,
+        angle_residuals: Tensor,
+        real: Tensor,
+        class_labels: Tensor,
+    ) -> tuple[Tensor, Tensor]: ...
+
+
 @dataclass(frozen=True)
 class DiscriminatorStepMetrics:
     total: float
@@ -55,6 +65,8 @@ class GeneratorStepMetrics:
     quantum_classical_gradient_cosine: float | None = None
     quantum_gan_gradient_cosine: float | None = None
     retained_quantum_gradient_fraction: float | None = None
+    coverage_regularizer: float | None = None
+    effective_coverage_weight: float | None = None
 
 
 def discriminator_step(
@@ -483,6 +495,78 @@ def coherence_guided_generator_step(
         quantum_classical_gradient_cosine=quantum_classical_cosine,
         quantum_gan_gradient_cosine=quantum_gan_cosine,
         retained_quantum_gradient_fraction=retained_fraction,
+    )
+
+
+def relational_coverage_generator_step(
+    generator: SharedQuantumGenerator,
+    discriminator: ACGANDiscriminator,
+    regularizer_model: RelationalCoverageRegularizer,
+    optimizer: torch.optim.Optimizer,
+    real_images: Tensor,
+    noise: Tensor,
+    class_labels: Tensor,
+    *,
+    kde_weight: float,
+    coverage_weight: float,
+) -> GeneratorStepMetrics:
+    """Add a separately weighted relational term without changing the KDE objective."""
+
+    if kde_weight <= 0 or coverage_weight <= 0:
+        raise ValueError("KDE and coverage weights must be positive")
+    if real_images.shape[0] != noise.shape[0] or class_labels.shape != (noise.shape[0],):
+        raise ValueError("real images, noise, and class labels must share the batch dimension")
+
+    optimizer.zero_grad(set_to_none=True)
+    discriminator.zero_grad(set_to_none=True)
+    previous_requires_grad = [parameter.requires_grad for parameter in discriminator.parameters()]
+    discriminator_was_training = discriminator.training
+    discriminator.eval()
+    for parameter in discriminator.parameters():
+        parameter.requires_grad_(False)
+
+    try:
+        images, angle_residuals = generator.forward_with_angles(noise, class_labels)
+        kde_loss, coverage_loss = regularizer_model.loss_components(
+            images,
+            angle_residuals,
+            real_images,
+            class_labels,
+        )
+        for name, loss in (("KDE", kde_loss), ("coverage", coverage_loss)):
+            if loss.ndim != 0 or not torch.isfinite(loss):
+                raise RuntimeError(f"{name} regularizer must return one finite scalar")
+
+        adversarial_logits, class_logits = discriminator(images)
+        adversarial = functional.binary_cross_entropy_with_logits(
+            adversarial_logits,
+            torch.ones_like(adversarial_logits),
+        )
+        auxiliary = functional.cross_entropy(class_logits, class_labels)
+        gan_objective = adversarial + auxiliary
+        total = gan_objective + kde_weight * kde_loss + coverage_weight * coverage_loss
+        total.backward()
+        optimizer.step()
+    finally:
+        discriminator.train(discriminator_was_training)
+        for parameter, requires_grad in zip(
+            discriminator.parameters(),
+            previous_requires_grad,
+            strict=True,
+        ):
+            parameter.requires_grad_(requires_grad)
+
+    return GeneratorStepMetrics(
+        total=total.detach().item(),
+        adversarial=adversarial.detach().item(),
+        auxiliary=auxiliary.detach().item(),
+        regularizer=(kde_loss + coverage_loss).detach().item(),
+        effective_regularizer_weight=kde_weight,
+        regularizer_to_gan_gradient_ratio=None,
+        mean_target_energy=0.0,
+        classical_regularizer=kde_loss.detach().item(),
+        coverage_regularizer=coverage_loss.detach().item(),
+        effective_coverage_weight=coverage_weight,
     )
 
 

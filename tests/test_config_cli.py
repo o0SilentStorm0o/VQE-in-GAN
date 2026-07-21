@@ -149,3 +149,57 @@ def test_contrastive_reference_rejects_online_gradient_balancing() -> None:
             regularizer_weight=2e-5,
             regularizer_gradient_ratio=0.1,
         )
+
+
+def test_relational_coverage_requires_an_explicit_precalibrated_weight() -> None:
+    with pytest.raises(ValueError, match="calibrated coverage_weight"):
+        build_parser().parse_args(
+            [
+                "--run-name",
+                "uncalibrated-coverage",
+                "--variant",
+                "quantum_kde_relational_coverage",
+            ]
+        )
+        config_from_arguments(
+            build_parser().parse_args(
+                [
+                    "--run-name",
+                    "uncalibrated-coverage",
+                    "--variant",
+                    "quantum_kde_relational_coverage",
+                ]
+            )
+        )
+
+    config = config_from_arguments(
+        build_parser().parse_args(
+            [
+                "--run-name",
+                "calibrated-coverage",
+                "--variant",
+                "quantum_kde_relational_coverage",
+                "--coverage-weight",
+                "0.03",
+            ]
+        )
+    )
+    assert config.variant.uses_relational_coverage
+    assert config.coverage_weight == 0.03
+    assert config.regularizer_weight == 2e-5
+
+
+def test_kde_scale_control_changes_only_the_outer_default_weight() -> None:
+    config = config_from_arguments(
+        build_parser().parse_args(
+            [
+                "--run-name",
+                "kde-scale-control",
+                "--variant",
+                "classical_log_kde_scale_control",
+            ]
+        )
+    )
+
+    assert config.regularizer_weight == 1.9e-5
+    assert config.coverage_weight == 0

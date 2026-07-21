@@ -22,6 +22,15 @@ class ModularAblation(str, Enum):
     ENERGY_ONLY = "energy_only"
 
 
+class RelationalKernel(str, Enum):
+    """Kernel used by the trainable same-class coverage objective."""
+
+    QUANTUM_FULL = "quantum_full"
+    QUANTUM_PRODUCT = "quantum_product"
+    QUANTUM_DEPHASED = "quantum_dephased"
+    CLASSICAL_PERIODIC_RBF = "classical_periodic_rbf"
+
+
 class QuantumModularFreeEnergy(nn.Module):
     r"""Match class-conditional generated and real mixed quantum states.
 
@@ -825,6 +834,307 @@ class HybridQuantumKDEContrastiveReference(nn.Module):
         )
 
 
+class TrainableRelationalCoverageReference(nn.Module):
+    r"""Match generated and real same-class support with data-projector energies.
+
+    Generated angles retain the fixed pooled-image encoding and add a small residual predicted by
+    the generator's angle head. For the full quantum kernel, each pairwise energy is
+
+    .. math::
+       E_{ij}=1-|\langle\psi_G^i|\psi_R^j\rangle|^2.
+
+    Bidirectional normalized soft minima reward both generated-to-real support membership and
+    real-to-generated coverage. Product and dephased modes are causal circuit controls. The
+    classical mode keeps every outer operation and replaces only state fidelity with a periodic
+    RBF kernel on the identical angles.
+    """
+
+    _QUADRANT_RING_PERMUTATION = (
+        5,
+        7,
+        15,
+        13,
+        0,
+        2,
+        10,
+        8,
+        1,
+        3,
+        11,
+        9,
+        4,
+        6,
+        14,
+        12,
+    )
+
+    def __init__(
+        self,
+        circuit_spec: QuantumCircuitSpec | None = None,
+        *,
+        num_classes: int = 10,
+        execution_device: torch.device | str = "cpu",
+        angle_scale: float = 0.75,
+        angle_residual_fraction: float = 0.10,
+        temperature: float = 0.10,
+        kernel: RelationalKernel | str = RelationalKernel.QUANTUM_FULL,
+    ) -> None:
+        super().__init__()
+        self.circuit_spec = circuit_spec or QuantumCircuitSpec()
+        if self.circuit_spec.num_parameters != 16:
+            raise ValueError("relational coverage requires exactly 16 circuit parameters")
+        if num_classes <= 0:
+            raise ValueError("num_classes must be positive")
+        if angle_scale <= 0 or temperature <= 0:
+            raise ValueError("angle_scale and temperature must be positive")
+        if not 0 < angle_residual_fraction <= 1:
+            raise ValueError("angle_residual_fraction must be in (0, 1]")
+        self.num_classes = num_classes
+        self.execution_device = torch.device(execution_device)
+        self.angle_scale = angle_scale
+        self.angle_residual_fraction = angle_residual_fraction
+        self.temperature = temperature
+        self.kernel = RelationalKernel(kernel)
+        if (
+            self.execution_device.type == "mps"
+            and self.kernel is not RelationalKernel.CLASSICAL_PERIODIC_RBF
+        ):
+            raise ValueError("complex relational coverage is not supported on MPS")
+        self.backend = TorchStatevectorEnergy(self.circuit_spec).to(
+            device=self.execution_device,
+            dtype=torch.float32,
+        )
+        dimension = 2**self.circuit_spec.num_qubits
+        self.register_buffer(
+            "pixel_permutation",
+            torch.tensor(
+                self._QUADRANT_RING_PERMUTATION,
+                device=self.execution_device,
+                dtype=torch.long,
+            ),
+        )
+        self.register_buffer(
+            "reference_angles",
+            torch.empty(
+                0,
+                0,
+                self.circuit_spec.num_parameters,
+                device=self.execution_device,
+            ),
+        )
+        self.register_buffer(
+            "reference_states",
+            torch.empty(
+                0,
+                0,
+                dimension,
+                device=self.execution_device,
+                dtype=torch.complex64,
+            ),
+        )
+        self.register_buffer(
+            "classical_sigma_squared",
+            torch.tensor(float("nan"), device=self.execution_device),
+        )
+
+    @property
+    def reference_is_fitted(self) -> bool:
+        return self.reference_angles.shape[0] == self.num_classes
+
+    @property
+    def uses_quantum_kernel(self) -> bool:
+        return self.kernel is not RelationalKernel.CLASSICAL_PERIODIC_RBF
+
+    def fit_reference(self, images: Tensor, class_labels: Tensor) -> None:
+        """Encode an equal-size real reference bank once and detach it."""
+
+        _validate_reference_inputs(images, class_labels)
+        labels = class_labels.to(self.execution_device)
+        counts = [
+            int((labels == class_index).sum().item())
+            for class_index in range(self.num_classes)
+        ]
+        if min(counts) <= 0 or len(set(counts)) != 1:
+            raise ValueError("reference bank must contain equal positive class counts")
+        with torch.no_grad():
+            angles = self.base_angles(images)
+            self.reference_angles = torch.stack(
+                [angles[labels == class_index] for class_index in range(self.num_classes)]
+            ).detach()
+            if self.uses_quantum_kernel:
+                states = self.backend.statevector(
+                    angles,
+                    apply_entanglement=(
+                        self.kernel is not RelationalKernel.QUANTUM_PRODUCT
+                    ),
+                )
+                self.reference_states = torch.stack(
+                    [states[labels == class_index] for class_index in range(self.num_classes)]
+                ).detach()
+            else:
+                median_distance = _median_periodic_reference_distance(
+                    self.reference_angles
+                )
+                self.classical_sigma_squared = (
+                    median_distance / math.log(2.0)
+                ).detach()
+
+    def base_angles(self, images: Tensor) -> Tensor:
+        """Return the fixed spatial image encoding shared by real and generated samples."""
+
+        if images.ndim != 4 or images.shape[1] != 1:
+            raise ValueError("images must have shape (batch, 1, height, width)")
+        pooled = functional.adaptive_avg_pool2d(images, (4, 4)).flatten(start_dim=1)
+        return (
+            pooled.to(self.execution_device)[:, self.pixel_permutation]
+            * (torch.pi * self.angle_scale)
+        )
+
+    def generated_angles(self, images: Tensor, angle_residuals: Tensor) -> Tensor:
+        """Add the bounded trainable head output to the deterministic image angles."""
+
+        if angle_residuals.shape != (images.shape[0], self.circuit_spec.num_parameters):
+            raise ValueError("angle_residuals must match the image batch and circuit parameters")
+        if not angle_residuals.is_floating_point():
+            raise TypeError("angle_residuals must use a floating-point dtype")
+        return self.base_angles(images) + self.angle_residual_fraction * angle_residuals.to(
+            self.execution_device
+        )
+
+    def forward(
+        self,
+        generated: Tensor,
+        angle_residuals: Tensor,
+        class_labels: Tensor,
+    ) -> Tensor:
+        if not self.reference_is_fitted:
+            raise RuntimeError("fit_reference must be called before optimization")
+        if class_labels.shape != (generated.shape[0],) or class_labels.dtype != torch.long:
+            raise ValueError("class_labels must be one-dimensional torch.long values")
+        angles = self.generated_angles(generated, angle_residuals)
+        labels = class_labels.to(self.execution_device)
+        generated_states = None
+        if self.uses_quantum_kernel:
+            generated_states = self.backend.statevector(
+                angles,
+                apply_entanglement=(self.kernel is not RelationalKernel.QUANTUM_PRODUCT),
+            )
+
+        class_losses = []
+        for class_index in labels.unique(sorted=True):
+            mask = labels == class_index
+            similarities = self._similarities(
+                angles[mask],
+                generated_states[mask] if generated_states is not None else None,
+                int(class_index.item()),
+            )
+            energies = (1 - similarities).clamp(0, 1)
+            support = _normalized_soft_minimum(
+                energies,
+                dim=1,
+                temperature=self.temperature,
+            ).mean()
+            coverage = _normalized_soft_minimum(
+                energies,
+                dim=0,
+                temperature=self.temperature,
+            ).mean()
+            class_losses.append(0.5 * (support + coverage))
+        return torch.stack(class_losses).mean().to(generated.device)
+
+    def _similarities(
+        self,
+        generated_angles: Tensor,
+        generated_states: Tensor | None,
+        class_index: int,
+    ) -> Tensor:
+        if self.kernel is RelationalKernel.CLASSICAL_PERIODIC_RBF:
+            differences = (
+                generated_angles[:, None, :]
+                - self.reference_angles[class_index][None, :, :]
+            )
+            distances = (1 - differences.cos()).sum(dim=-1)
+            return torch.exp(-distances / self.classical_sigma_squared).clamp(0, 1)
+        assert generated_states is not None
+        reference_states = self.reference_states[class_index]
+        if self.kernel is RelationalKernel.QUANTUM_DEPHASED:
+            overlaps = generated_states.abs() @ reference_states.abs().transpose(0, 1)
+        else:
+            overlaps = generated_states.conj() @ reference_states.transpose(0, 1)
+        return overlaps.abs().square().real.clamp(0, 1)
+
+
+class KDERelationalCoverageReference(nn.Module):
+    """Keep log-KDE exact while exposing a separate trainable coverage component."""
+
+    def __init__(
+        self,
+        circuit_spec: QuantumCircuitSpec | None = None,
+        *,
+        num_classes: int = 10,
+        execution_device: torch.device | str = "cpu",
+        angle_scale: float = 0.75,
+        angle_residual_fraction: float = 0.10,
+        coverage_temperature: float = 0.10,
+        kde_sigma_squared: float = 0.03125,
+        kde_temperature: float = 0.75,
+        kernel: RelationalKernel | str = RelationalKernel.QUANTUM_FULL,
+    ) -> None:
+        super().__init__()
+        self.classical = ClassConditionalLogKDEReference(
+            num_classes=num_classes,
+            execution_device=execution_device,
+            sigma_squared=kde_sigma_squared,
+            temperature=kde_temperature,
+        )
+        self.coverage = TrainableRelationalCoverageReference(
+            circuit_spec,
+            num_classes=num_classes,
+            execution_device=execution_device,
+            angle_scale=angle_scale,
+            angle_residual_fraction=angle_residual_fraction,
+            temperature=coverage_temperature,
+            kernel=kernel,
+        )
+
+    @property
+    def reference_is_fitted(self) -> bool:
+        return self.classical.reference_is_fitted and self.coverage.reference_is_fitted
+
+    def fit_reference(self, images: Tensor, class_labels: Tensor) -> None:
+        self.classical.fit_reference(images, class_labels)
+        self.coverage.fit_reference(images, class_labels)
+
+    def loss_components(
+        self,
+        generated: Tensor,
+        angle_residuals: Tensor,
+        real: Tensor,
+        class_labels: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        """Return the unchanged KDE loss and the additive relational loss."""
+
+        return (
+            self.classical(generated, real, class_labels),
+            self.coverage(generated, angle_residuals, class_labels),
+        )
+
+    def forward(
+        self,
+        generated: Tensor,
+        angle_residuals: Tensor,
+        real: Tensor,
+        class_labels: Tensor,
+    ) -> Tensor:
+        classical, coverage = self.loss_components(
+            generated,
+            angle_residuals,
+            real,
+            class_labels,
+        )
+        return classical + coverage
+
+
 def _pooled_angles(
     images: Tensor,
     *,
@@ -833,6 +1143,34 @@ def _pooled_angles(
 ) -> Tensor:
     pooled = functional.adaptive_avg_pool2d(images, (4, 4)).flatten(start_dim=1)
     return pooled.to(execution_device) * (torch.pi * angle_scale)
+
+
+def _normalized_soft_minimum(
+    values: Tensor,
+    *,
+    dim: int,
+    temperature: float,
+) -> Tensor:
+    count = values.shape[dim]
+    return -temperature * (
+        torch.logsumexp(-values / temperature, dim=dim) - math.log(count)
+    )
+
+
+def _median_periodic_reference_distance(reference_angles: Tensor) -> Tensor:
+    distances = []
+    count = reference_angles.shape[1]
+    upper = torch.triu_indices(count, count, offset=1, device=reference_angles.device)
+    for class_angles in reference_angles:
+        differences = class_angles[:, None, :] - class_angles[None, :, :]
+        pairwise = (1 - differences.cos()).sum(dim=-1)
+        positive = pairwise[upper[0], upper[1]]
+        positive = positive[positive > torch.finfo(pairwise.dtype).eps]
+        if positive.numel() > 0:
+            distances.append(positive)
+    if not distances:
+        raise ValueError("periodic reference bandwidth is undefined for identical angles")
+    return torch.cat(distances).median()
 
 
 def _pure_state_densities(states: Tensor) -> Tensor:
