@@ -13,8 +13,10 @@ import torch
 from vqe_gan.models import ACGANDiscriminator, SharedQuantumGenerator, initialize_weights
 from vqe_gan.quantum.spec import HamiltonianFamily, IsingHamiltonianSpec
 from vqe_gan.quantum.torch_backend import DeviceBridgedEnergy, TorchStatevectorEnergy
+from vqe_gan.regularizers import ClassicalPrototypeEnergy, PermutedClassEnergy
 from vqe_gan.reproducibility import resolve_device, seed_everything
 from vqe_gan.training import discriminator_step, generator_step
+from vqe_gan.training.steps import AllClassEnergyModel
 
 
 @dataclass
@@ -23,7 +25,7 @@ class BenchmarkVariant:
     discriminator: ACGANDiscriminator
     generator_optimizer: torch.optim.Optimizer
     discriminator_optimizer: torch.optim.Optimizer
-    energy_backend: TorchStatevectorEnergy | DeviceBridgedEnergy | None
+    energy_backend: AllClassEnergyModel | None
     regularizer_weight: float
     regularizer_gradient_ratio: float | None
 
@@ -50,7 +52,7 @@ def build_variant(
     device: torch.device,
     quantum_device: torch.device,
     *,
-    with_quantum: bool,
+    energy_kind: str,
     gradient_ratio: float | None,
 ) -> BenchmarkVariant:
     generator = SharedQuantumGenerator().to(device)
@@ -58,7 +60,9 @@ def build_variant(
     generator.apply(initialize_weights)
     discriminator.apply(initialize_weights)
     energy_backend = None
-    if with_quantum:
+    if energy_kind == "classical":
+        energy_backend = ClassicalPrototypeEnergy().to(device=device, dtype=torch.float32)
+    elif energy_kind in {"quantum", "quantum_permuted"}:
         base_backend = TorchStatevectorEnergy(
             hamiltonian_spec=IsingHamiltonianSpec(family=HamiltonianFamily.CLASS_ENCODED)
         )
@@ -67,6 +71,11 @@ def build_variant(
             if quantum_device == device
             else DeviceBridgedEnergy(base_backend, quantum_device)
         )
+        if energy_kind == "quantum_permuted":
+            energy_backend = PermutedClassEnergy(energy_backend)
+    elif energy_kind != "none":
+        raise ValueError(f"Unsupported energy kind: {energy_kind}")
+    with_regularizer = energy_backend is not None
     return BenchmarkVariant(
         generator=generator,
         discriminator=discriminator,
@@ -77,8 +86,8 @@ def build_variant(
             betas=(0.5, 0.999),
         ),
         energy_backend=energy_backend,
-        regularizer_weight=0.1 if with_quantum else 0.0,
-        regularizer_gradient_ratio=gradient_ratio if with_quantum else None,
+        regularizer_weight=0.1 if with_regularizer else 0.0,
+        regularizer_gradient_ratio=gradient_ratio if with_regularizer else None,
     )
 
 
@@ -131,21 +140,26 @@ def main() -> None:
         "no_regularizer": build_variant(
             device,
             device,
-            with_quantum=False,
+            energy_kind="none",
             gradient_ratio=None,
-        )
+        ),
+        "classical_prototype": build_variant(
+            device,
+            device,
+            energy_kind="classical",
+            gradient_ratio=arguments.gradient_ratio,
+        ),
     }
-    variants.update(
-        {
-            f"quantum_contrastive_{name}": build_variant(
+    for energy_kind in ("quantum", "quantum_permuted"):
+        variants.update({
+            f"{energy_kind}_{name}": build_variant(
                 device,
                 quantum_device,
-                with_quantum=True,
+                energy_kind=energy_kind,
                 gradient_ratio=arguments.gradient_ratio,
             )
             for name, quantum_device in selected_quantum_devices.items()
-        }
-    )
+        })
 
     for variant in variants.values():
         for _ in range(arguments.warmup):
@@ -193,6 +207,16 @@ def main() -> None:
         "warmup": arguments.warmup,
         "repeats": arguments.repeats,
         "gradient_ratio": arguments.gradient_ratio,
+        "step_ms": {
+            name: {
+                "median": statistics.median(values),
+                "mean": statistics.mean(values),
+                "stdev": statistics.stdev(values) if len(values) > 1 else 0.0,
+                "minimum": min(values),
+                "maximum": max(values),
+            }
+            for name, values in timings.items()
+        },
         "median_step_ms": medians,
         "quantum_overhead": overheads,
     }

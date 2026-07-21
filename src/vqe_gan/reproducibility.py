@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import json
 import platform
 import random
@@ -11,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import qiskit
 import torch
 
 
@@ -52,7 +52,7 @@ def collect_provenance(repository_root: Path) -> dict[str, Any]:
         "python": platform.python_version(),
         "platform": platform.platform(),
         "torch": torch.__version__,
-        "qiskit": qiskit.__version__,
+        "qiskit": _package_version("qiskit"),
     }
 
 
@@ -80,3 +80,12 @@ def file_sha256(path: str | Path) -> str | None:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _package_version(distribution: str) -> str | None:
+    """Return optional dependency metadata without importing the package."""
+
+    try:
+        return importlib.metadata.version(distribution)
+    except importlib.metadata.PackageNotFoundError:
+        return None

@@ -150,6 +150,11 @@ On Apple Silicon, the default `auto` placement keeps the ACGAN on MPS and evalua
 statevector on CPU. Full-step benchmark methodology and results are recorded in
 [`docs/training_step_benchmark.md`](docs/training_step_benchmark.md).
 
+The tested LUMI-G setup, measured MI250X timings, allocation accounting, and the frozen ten-seed
+job-array projection are recorded in [`docs/lumi_g_benchmark.md`](docs/lumi_g_benchmark.md). The
+production array script is [`scripts/lumi_run_array.sbatch`](scripts/lumi_run_array.sbatch); it does
+not embed an allocation account and therefore cannot submit work by itself.
+
 ### Historical notebooks
 
 The root-level notebooks belong to the original experiment and are retained for traceability.
