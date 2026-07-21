@@ -11,6 +11,7 @@ from torch import Tensor
 
 from vqe_gan.models.acgan import ACGANDiscriminator, SharedQuantumGenerator
 from vqe_gan.quantum.losses import contrastive_energy_loss
+from vqe_gan.training.budget import CoverageBudgetTarget
 
 
 class AllClassEnergyModel(Protocol):
@@ -67,6 +68,28 @@ class GeneratorStepMetrics:
     retained_quantum_gradient_fraction: float | None = None
     coverage_regularizer: float | None = None
     effective_coverage_weight: float | None = None
+    coverage_shared_target_ratio: float | None = None
+    coverage_shared_achieved_ratio: float | None = None
+    coverage_shared_ratio_relative_error: float | None = None
+    coverage_shared_anchor_gradient_norm: float | None = None
+    coverage_shared_gradient_norm: float | None = None
+    coverage_shared_weighted_gradient_norm: float | None = None
+    coverage_shared_gradient_cosine: float | None = None
+    coverage_shared_adam_update_norm: float | None = None
+    coverage_shared_adam_auxiliary_ratio: float | None = None
+    coverage_shared_adam_target_ratio: float | None = None
+    coverage_shared_adam_ratio_relative_error: float | None = None
+    coverage_shared_adam_uncorrected_ratio: float | None = None
+    coverage_shared_adam_uncorrected_relative_error: float | None = None
+    coverage_shared_adam_update_multiplier: float | None = None
+    coverage_shared_adam_proposal_relative_error: float | None = None
+    coverage_angle_gradient_target_norm: float | None = None
+    coverage_angle_gradient_achieved_norm: float | None = None
+    coverage_angle_gradient_relative_error: float | None = None
+    coverage_angle_update_target_norm: float | None = None
+    coverage_angle_update_achieved_norm: float | None = None
+    coverage_angle_update_relative_error: float | None = None
+    coverage_angle_update_multiplier: float | None = None
 
 
 def discriminator_step(
@@ -105,9 +128,7 @@ def discriminator_step(
     )
     real_auxiliary = functional.cross_entropy(real_class_logits, real_labels)
     fake_auxiliary = functional.cross_entropy(fake_class_logits, generated_labels)
-    total = 0.5 * (
-        real_adversarial + fake_adversarial + real_auxiliary + fake_auxiliary
-    )
+    total = 0.5 * (real_adversarial + fake_adversarial + real_auxiliary + fake_auxiliary)
     total.backward()
     optimizer.step()
 
@@ -408,9 +429,7 @@ def coherence_guided_generator_step(
         if regularizer_gradient_ratio is None:
             classical_weight = gan_norm.new_tensor(regularizer_weight)
         else:
-            classical_weight = (
-                regularizer_gradient_ratio * gan_norm / classical_norm
-            ).detach()
+            classical_weight = (regularizer_gradient_ratio * gan_norm / classical_norm).detach()
         weighted_classical = _scale_gradients(classical_gradients, classical_weight)
 
         quantum_classical_cosine = _gradient_cosine(
@@ -436,9 +455,7 @@ def coherence_guided_generator_step(
             weighted_quantum = tuple(torch.zeros_like(value) for value in quantum_safe)
             achieved_quantum_ratio = 0.0
         else:
-            quantum_weight = (
-                coherence_gradient_ratio * gan_norm / quantum_safe_norm
-            ).detach()
+            quantum_weight = (coherence_gradient_ratio * gan_norm / quantum_safe_norm).detach()
             weighted_quantum = _scale_gradients(quantum_safe, quantum_weight)
             achieved_quantum_ratio = coherence_gradient_ratio
 
@@ -463,9 +480,7 @@ def coherence_guided_generator_step(
                 strict=True,
             )
         )
-        combined_ratio = (
-            _tensor_gradient_norm(combined_regularizer_gradients) / gan_norm
-        ).item()
+        combined_ratio = (_tensor_gradient_norm(combined_regularizer_gradients) / gan_norm).item()
         total = (
             gan_objective.detach()
             + classical_weight * classical_loss.detach()
@@ -509,11 +524,16 @@ def relational_coverage_generator_step(
     *,
     kde_weight: float,
     coverage_weight: float,
+    budget_target: CoverageBudgetTarget | None = None,
+    record_budget: bool = False,
+    match_angle_head_budget: bool = False,
 ) -> GeneratorStepMetrics:
-    """Add a separately weighted relational term without changing the KDE objective."""
+    """Apply a relational update with an optional full-trajectory reference budget."""
 
     if kde_weight <= 0 or coverage_weight <= 0:
         raise ValueError("KDE and coverage weights must be positive")
+    if record_budget and budget_target is not None:
+        raise ValueError("a step cannot record and replay a coverage budget simultaneously")
     if real_images.shape[0] != noise.shape[0] or class_labels.shape != (noise.shape[0],):
         raise ValueError("real images, noise, and class labels must share the batch dimension")
 
@@ -544,9 +564,285 @@ def relational_coverage_generator_step(
         )
         auxiliary = functional.cross_entropy(class_logits, class_labels)
         gan_objective = adversarial + auxiliary
-        total = gan_objective + kde_weight * kde_loss + coverage_weight * coverage_loss
-        total.backward()
+        anchor_objective = gan_objective + kde_weight * kde_loss
+        if not record_budget and budget_target is None and not match_angle_head_budget:
+            total = anchor_objective + coverage_weight * coverage_loss
+            total.backward()
+            optimizer.step()
+            return GeneratorStepMetrics(
+                total=total.detach().item(),
+                adversarial=adversarial.detach().item(),
+                auxiliary=auxiliary.detach().item(),
+                regularizer=(kde_loss + coverage_loss).detach().item(),
+                effective_regularizer_weight=kde_weight,
+                regularizer_to_gan_gradient_ratio=None,
+                mean_target_energy=0.0,
+                classical_regularizer=kde_loss.detach().item(),
+                coverage_regularizer=coverage_loss.detach().item(),
+                effective_coverage_weight=coverage_weight,
+            )
+        shared_parameters = (
+            *generator.label_embedding.parameters(),
+            *generator.input_projection.parameters(),
+            *generator.image_decoder.parameters(),
+        )
+        angle_parameters = tuple(
+            parameter for parameter in generator.angle_head.parameters() if parameter.requires_grad
+        )
+        if match_angle_head_budget and not angle_parameters:
+            raise ValueError("angle-head budget matching requires trainable angle parameters")
+
+        anchor_gradients = torch.autograd.grad(
+            anchor_objective,
+            shared_parameters,
+            retain_graph=True,
+        )
+        coverage_shared_gradients = torch.autograd.grad(
+            coverage_loss,
+            shared_parameters,
+            retain_graph=bool(angle_parameters) or budget_target is None,
+        )
+        coverage_angle_gradients = (
+            torch.autograd.grad(
+                coverage_loss,
+                angle_parameters,
+                retain_graph=budget_target is None,
+            )
+            if angle_parameters
+            else ()
+        )
+        anchor_norm = _tensor_gradient_norm(anchor_gradients)
+        coverage_shared_norm = _tensor_gradient_norm(coverage_shared_gradients)
+        epsilon = torch.finfo(anchor_norm.dtype).eps
+        if not torch.isfinite(anchor_norm) or anchor_norm.item() <= epsilon:
+            raise RuntimeError("anchor gradient is non-finite or too small for budget matching")
+        if not torch.isfinite(coverage_shared_norm) or coverage_shared_norm.item() <= epsilon:
+            raise RuntimeError("coverage gradient is non-finite or too small for budget matching")
+
+        if budget_target is None:
+            target_shared_ratio = (coverage_weight * coverage_shared_norm / anchor_norm).detach()
+            effective_shared_weight = anchor_norm.new_tensor(coverage_weight)
+        else:
+            target_shared_ratio = anchor_norm.new_tensor(budget_target.shared_ratio)
+            effective_shared_weight = (
+                target_shared_ratio * anchor_norm / coverage_shared_norm
+            ).detach()
+        weighted_coverage_shared = _scale_gradients(
+            coverage_shared_gradients,
+            effective_shared_weight,
+        )
+        final_shared_gradients = tuple(
+            anchor + coverage
+            for anchor, coverage in zip(
+                anchor_gradients,
+                weighted_coverage_shared,
+                strict=True,
+            )
+        )
+        achieved_shared_ratio = _tensor_gradient_norm(weighted_coverage_shared) / anchor_norm
+        shared_ratio_relative_error = _relative_error(
+            achieved_shared_ratio,
+            target_shared_ratio,
+        )
+
+        angle_gradient_target_norm = None
+        angle_gradient_achieved_norm = None
+        angle_gradient_relative_error = None
+        if angle_parameters:
+            coverage_angle_norm = _tensor_gradient_norm(coverage_angle_gradients)
+            if not torch.isfinite(coverage_angle_norm) or coverage_angle_norm.item() <= epsilon:
+                raise RuntimeError(
+                    "angle-head coverage gradient is non-finite or too small for budget matching"
+                )
+            if match_angle_head_budget and budget_target is not None:
+                if budget_target.angle_gradient_norm is None:
+                    raise ValueError("Phase B replay requires an angle-gradient target")
+                angle_gradient_target = coverage_angle_norm.new_tensor(
+                    budget_target.angle_gradient_norm
+                )
+                effective_angle_weight = (angle_gradient_target / coverage_angle_norm).detach()
+            else:
+                effective_angle_weight = coverage_angle_norm.new_tensor(coverage_weight)
+                angle_gradient_target = (effective_angle_weight * coverage_angle_norm).detach()
+            weighted_coverage_angle = _scale_gradients(
+                coverage_angle_gradients,
+                effective_angle_weight,
+            )
+            if match_angle_head_budget:
+                achieved_angle_gradient = _tensor_gradient_norm(weighted_coverage_angle)
+                angle_gradient_target_norm = angle_gradient_target.item()
+                angle_gradient_achieved_norm = achieved_angle_gradient.item()
+                angle_gradient_relative_error = _relative_error(
+                    achieved_angle_gradient,
+                    angle_gradient_target,
+                )
+        else:
+            weighted_coverage_angle = ()
+
+        if budget_target is None:
+            backward_total = anchor_objective + coverage_weight * coverage_loss
+            backward_total.backward()
+            optimizer_shared_gradients = tuple(
+                parameter.grad.detach() for parameter in shared_parameters
+            )
+        else:
+            optimizer_shared_gradients = final_shared_gradients
+            for parameter, gradient in zip(
+                shared_parameters,
+                optimizer_shared_gradients,
+                strict=True,
+            ):
+                parameter.grad = gradient.detach()
+            for parameter, gradient in zip(
+                angle_parameters,
+                weighted_coverage_angle,
+                strict=True,
+            ):
+                parameter.grad = gradient.detach()
+
+        adam_anchor_updates = _adam_proposed_updates(
+            optimizer,
+            shared_parameters,
+            anchor_gradients,
+        )
+        adam_total_updates = _adam_proposed_updates(
+            optimizer,
+            shared_parameters,
+            optimizer_shared_gradients,
+        )
+        adam_anchor_update_norm = _tensor_gradient_norm(adam_anchor_updates)
+        if adam_anchor_update_norm.item() <= epsilon:
+            raise RuntimeError("counterfactual anchor Adam update is too small")
+
+        shared_before = tuple(parameter.detach().clone() for parameter in shared_parameters)
+        angle_before = (
+            tuple(parameter.detach().clone() for parameter in angle_parameters)
+            if match_angle_head_budget
+            else ()
+        )
         optimizer.step()
+
+        ordinary_shared_updates = tuple(
+            parameter.detach() - before
+            for parameter, before in zip(shared_parameters, shared_before, strict=True)
+        )
+        ordinary_shared_update_norm = _tensor_gradient_norm(ordinary_shared_updates)
+        if ordinary_shared_update_norm.item() <= epsilon:
+            raise RuntimeError("ordinary shared Adam update is too small")
+        adam_proposal_relative_error = (
+            _tensor_gradient_norm(
+                tuple(
+                    actual - proposed
+                    for actual, proposed in zip(
+                        ordinary_shared_updates,
+                        adam_total_updates,
+                        strict=True,
+                    )
+                )
+            )
+            / ordinary_shared_update_norm
+        )
+        uncorrected_adam_auxiliary_updates = tuple(
+            total_update - anchor_update
+            for total_update, anchor_update in zip(
+                ordinary_shared_updates,
+                adam_anchor_updates,
+                strict=True,
+            )
+        )
+        uncorrected_adam_auxiliary_norm = _tensor_gradient_norm(uncorrected_adam_auxiliary_updates)
+        if (
+            not torch.isfinite(uncorrected_adam_auxiliary_norm)
+            or uncorrected_adam_auxiliary_norm.item() <= epsilon
+        ):
+            raise RuntimeError("shared auxiliary Adam update is non-finite or too small")
+        uncorrected_adam_auxiliary_ratio = uncorrected_adam_auxiliary_norm / adam_anchor_update_norm
+        adam_target_ratio = (
+            uncorrected_adam_auxiliary_ratio.detach()
+            if budget_target is None
+            else uncorrected_adam_auxiliary_ratio.new_tensor(
+                budget_target.shared_adam_auxiliary_ratio
+            )
+        )
+        adam_uncorrected_relative_error = _relative_error(
+            uncorrected_adam_auxiliary_ratio,
+            adam_target_ratio,
+        )
+        adam_update_multiplier = (
+            adam_target_ratio * adam_anchor_update_norm / uncorrected_adam_auxiliary_norm
+        ).detach()
+        if budget_target is not None:
+            with torch.no_grad():
+                for parameter, before, anchor_update, auxiliary_update in zip(
+                    shared_parameters,
+                    shared_before,
+                    adam_anchor_updates,
+                    uncorrected_adam_auxiliary_updates,
+                    strict=True,
+                ):
+                    parameter.copy_(
+                        before + anchor_update + adam_update_multiplier * auxiliary_update
+                    )
+        achieved_shared_updates = tuple(
+            parameter.detach() - before
+            for parameter, before in zip(shared_parameters, shared_before, strict=True)
+        )
+        achieved_adam_auxiliary_updates = tuple(
+            total_update - anchor_update
+            for total_update, anchor_update in zip(
+                achieved_shared_updates,
+                adam_anchor_updates,
+                strict=True,
+            )
+        )
+        adam_auxiliary_ratio = (
+            _tensor_gradient_norm(achieved_adam_auxiliary_updates) / adam_anchor_update_norm
+        )
+        adam_ratio_relative_error = _relative_error(
+            adam_auxiliary_ratio,
+            adam_target_ratio,
+        )
+        shared_update_norm = _parameter_displacement_norm(shared_parameters, shared_before)
+        angle_update_target_norm = None
+        angle_update_achieved_norm = None
+        angle_update_relative_error = None
+        angle_update_multiplier = None
+        if match_angle_head_budget:
+            proposed_angle_update_norm = _parameter_displacement_norm(
+                angle_parameters,
+                angle_before,
+            )
+            if (
+                not torch.isfinite(proposed_angle_update_norm)
+                or proposed_angle_update_norm.item() <= epsilon
+            ):
+                raise RuntimeError("angle-head Adam update is non-finite or too small")
+            if budget_target is None:
+                target_angle_update = proposed_angle_update_norm.detach()
+            else:
+                if budget_target.angle_update_norm is None:
+                    raise ValueError("Phase B replay requires an angle-update target")
+                target_angle_update = proposed_angle_update_norm.new_tensor(
+                    budget_target.angle_update_norm
+                )
+            multiplier = (target_angle_update / proposed_angle_update_norm).detach()
+            if budget_target is not None:
+                with torch.no_grad():
+                    for parameter, before in zip(angle_parameters, angle_before, strict=True):
+                        parameter.copy_(before + multiplier * (parameter - before))
+            achieved_angle_update = _parameter_displacement_norm(
+                angle_parameters,
+                angle_before,
+            )
+            angle_update_target_norm = target_angle_update.item()
+            angle_update_achieved_norm = achieved_angle_update.item()
+            angle_update_relative_error = _relative_error(
+                achieved_angle_update,
+                target_angle_update,
+            )
+            angle_update_multiplier = multiplier.item()
+
+        total = anchor_objective.detach() + effective_shared_weight * coverage_loss.detach()
     finally:
         discriminator.train(discriminator_was_training)
         for parameter, requires_grad in zip(
@@ -566,12 +862,103 @@ def relational_coverage_generator_step(
         mean_target_energy=0.0,
         classical_regularizer=kde_loss.detach().item(),
         coverage_regularizer=coverage_loss.detach().item(),
-        effective_coverage_weight=coverage_weight,
+        effective_coverage_weight=(
+            coverage_weight if budget_target is None else effective_shared_weight.item()
+        ),
+        coverage_shared_target_ratio=target_shared_ratio.item(),
+        coverage_shared_achieved_ratio=achieved_shared_ratio.item(),
+        coverage_shared_ratio_relative_error=shared_ratio_relative_error,
+        coverage_shared_anchor_gradient_norm=anchor_norm.item(),
+        coverage_shared_gradient_norm=coverage_shared_norm.item(),
+        coverage_shared_weighted_gradient_norm=(
+            _tensor_gradient_norm(weighted_coverage_shared).item()
+        ),
+        coverage_shared_gradient_cosine=_gradient_cosine(
+            coverage_shared_gradients,
+            anchor_gradients,
+        ),
+        coverage_shared_adam_update_norm=shared_update_norm.item(),
+        coverage_shared_adam_auxiliary_ratio=adam_auxiliary_ratio.item(),
+        coverage_shared_adam_target_ratio=adam_target_ratio.item(),
+        coverage_shared_adam_ratio_relative_error=adam_ratio_relative_error,
+        coverage_shared_adam_uncorrected_ratio=(uncorrected_adam_auxiliary_ratio.item()),
+        coverage_shared_adam_uncorrected_relative_error=(adam_uncorrected_relative_error),
+        coverage_shared_adam_update_multiplier=adam_update_multiplier.item(),
+        coverage_shared_adam_proposal_relative_error=(adam_proposal_relative_error.item()),
+        coverage_angle_gradient_target_norm=angle_gradient_target_norm,
+        coverage_angle_gradient_achieved_norm=angle_gradient_achieved_norm,
+        coverage_angle_gradient_relative_error=angle_gradient_relative_error,
+        coverage_angle_update_target_norm=angle_update_target_norm,
+        coverage_angle_update_achieved_norm=angle_update_achieved_norm,
+        coverage_angle_update_relative_error=angle_update_relative_error,
+        coverage_angle_update_multiplier=angle_update_multiplier,
     )
 
 
 def _tensor_gradient_norm(gradients: tuple[Tensor, ...]) -> Tensor:
     return torch.stack([gradient.square().sum() for gradient in gradients]).sum().sqrt()
+
+
+def _relative_error(actual: Tensor, target: Tensor) -> float:
+    denominator = torch.maximum(target.abs(), target.new_tensor(torch.finfo(target.dtype).eps))
+    return ((actual - target).abs() / denominator).item()
+
+
+def _parameter_displacement_norm(
+    parameters: tuple[torch.nn.Parameter, ...],
+    before: tuple[Tensor, ...],
+) -> Tensor:
+    return _tensor_gradient_norm(
+        tuple(
+            parameter.detach() - value for parameter, value in zip(parameters, before, strict=True)
+        )
+    )
+
+
+def _adam_proposed_updates(
+    optimizer: torch.optim.Optimizer,
+    parameters: tuple[torch.nn.Parameter, ...],
+    gradients: tuple[Tensor, ...],
+) -> tuple[Tensor, ...]:
+    """Return the next Adam displacements without mutating optimizer state."""
+
+    if not isinstance(optimizer, torch.optim.Adam):
+        raise TypeError("relational budget diagnostics require torch.optim.Adam")
+    groups_by_parameter = {
+        id(parameter): group for group in optimizer.param_groups for parameter in group["params"]
+    }
+    updates = []
+    for parameter, gradient in zip(parameters, gradients, strict=True):
+        group = groups_by_parameter.get(id(parameter))
+        if group is None:
+            raise ValueError("budgeted parameter is missing from the optimizer")
+        if (
+            group.get("amsgrad", False)
+            or group.get("maximize", False)
+            or group.get("weight_decay", 0) != 0
+        ):
+            raise ValueError("budget diagnostics require plain Adam without optional transforms")
+        beta1, beta2 = group["betas"]
+        state = optimizer.state.get(parameter, {})
+        prior_step = state.get("step", 0)
+        if isinstance(prior_step, Tensor):
+            prior_step = int(prior_step.item())
+        step = int(prior_step) + 1
+        prior_mean = state.get("exp_avg")
+        prior_squared_mean = state.get("exp_avg_sq")
+        if prior_mean is None:
+            prior_mean = torch.zeros_like(parameter)
+        if prior_squared_mean is None:
+            prior_squared_mean = torch.zeros_like(parameter)
+        mean = beta1 * prior_mean + (1 - beta1) * gradient
+        squared_mean = beta2 * prior_squared_mean + (1 - beta2) * gradient.square()
+        bias_correction1 = 1 - beta1**step
+        bias_correction2 = 1 - beta2**step
+        denominator = squared_mean.sqrt() / (bias_correction2**0.5)
+        denominator = denominator + group["eps"]
+        update = -(group["lr"] / bias_correction1) * mean / denominator
+        updates.append(update)
+    return tuple(updates)
 
 
 def _gradient_dot(first: tuple[Tensor, ...], second: tuple[Tensor, ...]) -> Tensor:
@@ -603,6 +990,5 @@ def _remove_gradient_projection(
         return source
     coefficient = _gradient_dot(source, reference) / reference_squared_norm
     return tuple(
-        value - coefficient * direction
-        for value, direction in zip(source, reference, strict=True)
+        value - coefficient * direction for value, direction in zip(source, reference, strict=True)
     )

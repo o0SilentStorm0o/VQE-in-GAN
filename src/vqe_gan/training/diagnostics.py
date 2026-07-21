@@ -178,9 +178,7 @@ def measure_gradient_diagnostics(
         regularizer_to_gan_norm_ratio=(regularizer_norm / gan_norm if gan_norm > 0 else 0.0),
         effective_regularizer_weight=effective_regularizer_weight,
         regularizer_label_embedding_norm=_norm(regularizer_gradients[:label_count]),
-        regularizer_input_projection_norm=_norm(
-            regularizer_gradients[label_count:projection_end]
-        ),
+        regularizer_input_projection_norm=_norm(regularizer_gradients[label_count:projection_end]),
         regularizer_image_decoder_norm=_norm(regularizer_gradients[projection_end:]),
         adversarial_auxiliary_cosine=_cosine(adversarial_gradients, auxiliary_gradients),
         regularizer_gan_objective_cosine=_cosine(
@@ -298,9 +296,7 @@ def measure_distribution_gradient_diagnostics(
         regularizer_to_gan_norm_ratio=(regularizer_norm / gan_norm if gan_norm > 0 else 0.0),
         effective_regularizer_weight=effective_regularizer_weight,
         regularizer_label_embedding_norm=_norm(regularizer_gradients[:label_count]),
-        regularizer_input_projection_norm=_norm(
-            regularizer_gradients[label_count:projection_end]
-        ),
+        regularizer_input_projection_norm=_norm(regularizer_gradients[label_count:projection_end]),
         regularizer_image_decoder_norm=_norm(regularizer_gradients[projection_end:]),
         adversarial_auxiliary_cosine=_cosine(adversarial_gradients, auxiliary_gradients),
         regularizer_gan_objective_cosine=_cosine(regularizer_gradients, gan_gradients),
@@ -394,8 +390,7 @@ def measure_relational_gradient_diagnostics(
     coverage_shared = coverage_gradients[: len(shared_parameters)]
     coverage_angle = coverage_gradients[len(shared_parameters) :]
     indirect_gradients = tuple(
-        full - direct
-        for full, direct in zip(coverage_shared, direct_gradients, strict=True)
+        full - direct for full, direct in zip(coverage_shared, direct_gradients, strict=True)
     )
     gan_norm = _norm(gan_gradients)
     kde_norm = _norm(kde_gradients)
@@ -411,9 +406,7 @@ def measure_relational_gradient_diagnostics(
         direct_to_full_coverage_norm_ratio=(
             direct_norm / coverage_norm if coverage_norm > 0 else 0.0
         ),
-        weighted_kde_to_gan_norm_ratio=(
-            kde_weight * kde_norm / gan_norm if gan_norm > 0 else 0.0
-        ),
+        weighted_kde_to_gan_norm_ratio=(kde_weight * kde_norm / gan_norm if gan_norm > 0 else 0.0),
         weighted_coverage_to_gan_norm_ratio=(
             coverage_weight * coverage_norm / gan_norm if gan_norm > 0 else 0.0
         ),

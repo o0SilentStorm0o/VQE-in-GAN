@@ -8,7 +8,8 @@
 > A later trainable relational-coverage candidate improved development-set distribution metrics,
 > but failed its circuit-specific controls: its apparent advantage traded away class accuracy and
 > an initialization-only gradient match did not persist during training. No held-out seeds were
-> used for either failed candidate.
+> used for either failed candidate. A final full-trajectory reference-budget diagnostic is now
+> frozen to remove both raw-gradient and Adam-step confounds before reconsidering that mechanism.
 > The complete evidence and stopping rules are recorded in
 > [`docs/quantum_utility_audit.md`](docs/quantum_utility_audit.md).
 
@@ -27,6 +28,8 @@ The trainable relational mechanism, circuit controls, and gradient-matched diagn
 in [`docs/trainable_relational_coverage_protocol.md`](docs/trainable_relational_coverage_protocol.md)
 and
 [`docs/relational_gradient_matched_diagnostic_protocol.md`](docs/relational_gradient_matched_diagnostic_protocol.md).
+The two-stage full-trajectory follow-up is frozen in
+[`docs/reference_budget_relational_protocol.md`](docs/reference_budget_relational_protocol.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
@@ -182,6 +185,26 @@ uv run python scripts/run_seed_matrix.py \
 Run the same command with `--seed 202` and a distinct output root for the second pair. Stage 1
 failed its preregistered class-FID gate, so later seeds and causal ablations were intentionally not
 run.
+
+The full-trajectory relational diagnostic must be run and audited one phase at a time. Phase B is
+run only after the Phase A audit has been written:
+
+```bash
+uv run python scripts/run_reference_budget_relational.py \
+  --phase a --output-root runs/reference-budget \
+  --dataset-root data --classifier mnist_classifier.pth
+uv run python scripts/audit_reference_budget_relational.py \
+  --phase a --output-root runs/reference-budget
+
+uv run python scripts/run_reference_budget_relational.py \
+  --phase b --output-root runs/reference-budget \
+  --dataset-root data --classifier mnist_classifier.pth
+uv run python scripts/audit_reference_budget_relational.py \
+  --phase b --output-root runs/reference-budget
+```
+
+These commands are intentionally fixed to CPU, development seeds 42 and 43, 200 steps, and 5,000
+balanced evaluation samples. The audit never authorizes held-out execution automatically.
 
 The tested LUMI-G setup, measured MI250X timings, allocation accounting, and the frozen ten-seed
 job-array projection are recorded in [`docs/lumi_g_benchmark.md`](docs/lumi_g_benchmark.md). The

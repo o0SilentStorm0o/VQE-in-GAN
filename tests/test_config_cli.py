@@ -3,13 +3,11 @@ from __future__ import annotations
 import pytest
 
 from vqe_gan.cli import build_parser, config_from_arguments
-from vqe_gan.config import ExperimentConfig, ExperimentVariant
+from vqe_gan.config import CoverageBudgetMode, ExperimentConfig, ExperimentVariant
 
 
 def test_no_regularizer_cli_sets_zero_regularizer_weight() -> None:
-    arguments = build_parser().parse_args(
-        ["--run-name", "control", "--variant", "no_regularizer"]
-    )
+    arguments = build_parser().parse_args(["--run-name", "control", "--variant", "no_regularizer"])
     config = config_from_arguments(arguments)
 
     assert config.variant is ExperimentVariant.NO_REGULARIZER
@@ -204,3 +202,27 @@ def test_kde_scale_control_changes_only_the_outer_default_weight() -> None:
 
     assert config.regularizer_weight == 1.9e-5
     assert config.coverage_weight == 0
+
+
+def test_reference_budget_cli_exposes_phase_b_replay_settings() -> None:
+    config = config_from_arguments(
+        build_parser().parse_args(
+            [
+                "--run-name",
+                "budget-control",
+                "--variant",
+                "quantum_kde_relational_product",
+                "--max-steps",
+                "200",
+                "--coverage-budget-mode",
+                "replay",
+                "--coverage-budget-schedule",
+                "full-budget.json",
+                "--match-angle-head-budget",
+            ]
+        )
+    )
+
+    assert config.coverage_budget_mode is CoverageBudgetMode.REPLAY
+    assert config.coverage_budget_schedule == "full-budget.json"
+    assert config.match_angle_head_budget

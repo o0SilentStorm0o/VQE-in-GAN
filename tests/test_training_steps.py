@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import copy
+
+import pytest
 import torch
 from torch import Tensor, nn
 
@@ -7,6 +10,7 @@ from vqe_gan.models import ACGANDiscriminator, SharedQuantumGenerator
 from vqe_gan.quantum.spec import HamiltonianFamily, IsingHamiltonianSpec
 from vqe_gan.quantum.torch_backend import TorchStatevectorEnergy
 from vqe_gan.training import (
+    CoverageBudgetTarget,
     coherence_guided_generator_step,
     discriminator_step,
     distribution_regularized_generator_step,
@@ -155,9 +159,10 @@ class DecomposedMeanMatchingRegularizer(nn.Module):
         del class_labels
         classical = (generated.mean(dim=0) - real.mean(dim=0)).square().mean()
         quantum = (
-            generated[:, :, ::2, ::2].mean(dim=0)
-            - real[:, :, ::2, ::2].mean(dim=0)
-        ).square().mean()
+            (generated[:, :, ::2, ::2].mean(dim=0) - real[:, :, ::2, ::2].mean(dim=0))
+            .square()
+            .mean()
+        )
         return classical, quantum
 
 
@@ -173,6 +178,27 @@ class RelationalMeanMatchingRegularizer(nn.Module):
         kde = (generated.mean(dim=0) - real.mean(dim=0)).square().mean()
         coverage = kde + angle_residuals.square().mean()
         return kde, coverage
+
+
+class ScaledRelationalMeanMatchingRegularizer(RelationalMeanMatchingRegularizer):
+    def __init__(self, scale: float) -> None:
+        super().__init__()
+        self.scale = scale
+
+    def loss_components(
+        self,
+        generated: Tensor,
+        angle_residuals: Tensor,
+        real: Tensor,
+        class_labels: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        kde, coverage = super().loss_components(
+            generated,
+            angle_residuals,
+            real,
+            class_labels,
+        )
+        return kde, self.scale * coverage
 
 
 def test_distribution_step_updates_only_the_generator_with_balanced_gradient() -> None:
@@ -272,6 +298,123 @@ def test_relational_coverage_step_updates_the_angle_head_separately_from_kde() -
     for name, value in discriminator.state_dict().items():
         torch.testing.assert_close(value, discriminator_state[name])
     assert all(parameter.grad is None for parameter in discriminator.parameters())
+
+
+def test_relational_reference_budget_matches_shared_and_angle_optimizer_paths() -> None:
+    generator, discriminator, noise, labels, real_images = _models_and_batch()
+    replay_generator = copy.deepcopy(generator)
+    replay_discriminator = copy.deepcopy(discriminator)
+
+    def optimizer_for(model: SharedQuantumGenerator) -> torch.optim.Adam:
+        shared = (
+            *model.label_embedding.parameters(),
+            *model.input_projection.parameters(),
+            *model.image_decoder.parameters(),
+        )
+        return torch.optim.Adam(
+            [
+                {"params": shared},
+                {"params": tuple(model.angle_head.parameters())},
+            ],
+            lr=2e-4,
+            betas=(0.5, 0.999),
+        )
+
+    reference = relational_coverage_generator_step(
+        generator,
+        discriminator,
+        RelationalMeanMatchingRegularizer(),
+        optimizer_for(generator),
+        real_images,
+        noise,
+        labels,
+        kde_weight=2e-5,
+        coverage_weight=0.01,
+        record_budget=True,
+        match_angle_head_budget=True,
+    )
+    target = CoverageBudgetTarget(
+        step=1,
+        shared_ratio=reference.coverage_shared_target_ratio,
+        shared_anchor_gradient_norm=reference.coverage_shared_anchor_gradient_norm,
+        shared_coverage_gradient_norm=reference.coverage_shared_gradient_norm,
+        shared_weighted_coverage_gradient_norm=(reference.coverage_shared_weighted_gradient_norm),
+        shared_adam_update_norm=reference.coverage_shared_adam_update_norm,
+        shared_adam_auxiliary_ratio=reference.coverage_shared_adam_auxiliary_ratio,
+        angle_gradient_norm=reference.coverage_angle_gradient_target_norm,
+        angle_update_norm=reference.coverage_angle_update_target_norm,
+    )
+    replay = relational_coverage_generator_step(
+        replay_generator,
+        replay_discriminator,
+        ScaledRelationalMeanMatchingRegularizer(7.0),
+        optimizer_for(replay_generator),
+        real_images,
+        noise,
+        labels,
+        kde_weight=2e-5,
+        coverage_weight=0.01,
+        budget_target=target,
+        match_angle_head_budget=True,
+    )
+
+    assert replay.coverage_shared_ratio_relative_error <= 1e-5
+    assert replay.coverage_angle_gradient_relative_error <= 1e-5
+    assert replay.coverage_angle_update_relative_error <= 1e-4
+    assert replay.coverage_shared_adam_ratio_relative_error <= 1e-4
+    assert replay.coverage_shared_adam_proposal_relative_error <= 1e-5
+    assert (
+        replay.coverage_shared_adam_ratio_relative_error
+        < replay.coverage_shared_adam_uncorrected_relative_error
+    )
+    assert replay.effective_coverage_weight == pytest.approx(0.01 / 7.0, rel=1e-5)
+    assert replay.coverage_angle_update_multiplier is not None
+
+
+@pytest.mark.parametrize("match_angle_head_budget", [False, True])
+def test_recording_budget_does_not_change_the_full_fixed_update(
+    match_angle_head_budget: bool,
+) -> None:
+    generator, discriminator, noise, labels, real_images = _models_and_batch()
+    recorded_generator = copy.deepcopy(generator)
+    recorded_discriminator = copy.deepcopy(discriminator)
+
+    def optimizer_for(model: SharedQuantumGenerator) -> torch.optim.Adam:
+        return torch.optim.Adam(model.parameters(), lr=2e-4, betas=(0.5, 0.999))
+
+    relational_coverage_generator_step(
+        generator,
+        discriminator,
+        RelationalMeanMatchingRegularizer(),
+        optimizer_for(generator),
+        real_images,
+        noise,
+        labels,
+        kde_weight=2e-5,
+        coverage_weight=0.01,
+        match_angle_head_budget=match_angle_head_budget,
+    )
+    relational_coverage_generator_step(
+        recorded_generator,
+        recorded_discriminator,
+        RelationalMeanMatchingRegularizer(),
+        optimizer_for(recorded_generator),
+        real_images,
+        noise,
+        labels,
+        kde_weight=2e-5,
+        coverage_weight=0.01,
+        record_budget=True,
+        match_angle_head_budget=match_angle_head_budget,
+    )
+
+    for name, value in generator.state_dict().items():
+        torch.testing.assert_close(
+            value,
+            recorded_generator.state_dict()[name],
+            atol=0,
+            rtol=0,
+        )
 
 
 def test_relational_diagnostics_separate_direct_and_angle_head_paths() -> None:

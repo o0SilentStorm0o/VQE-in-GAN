@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import datasets, transforms
 
-from vqe_gan.config import ExperimentConfig, ExperimentVariant
+from vqe_gan.config import CoverageBudgetMode, ExperimentConfig, ExperimentVariant
 from vqe_gan.data import create_seeded_data_loader
 from vqe_gan.models import ACGANDiscriminator, SharedQuantumGenerator, initialize_weights
 from vqe_gan.quantum.spec import (
@@ -37,11 +38,14 @@ from vqe_gan.regularizers import (
 )
 from vqe_gan.reproducibility import (
     collect_provenance,
+    file_sha256,
     resolve_device,
     seed_everything,
     write_json,
 )
 from vqe_gan.training import (
+    CoverageBudgetSchedule,
+    CoverageBudgetTarget,
     coherence_guided_generator_step,
     discriminator_step,
     distribution_regularized_generator_step,
@@ -50,6 +54,7 @@ from vqe_gan.training import (
     measure_gradient_diagnostics,
     relational_coverage_generator_step,
 )
+from vqe_gan.training.budget import coverage_budget_metadata, coverage_budget_phase
 
 
 def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
@@ -66,18 +71,14 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
     seed_everything(config.seed)
     device = resolve_device(config.device)
     quantum_device = (
-        _resolve_quantum_device(config, device)
-        if config.variant.uses_quantum_backend
-        else None
+        _resolve_quantum_device(config, device) if config.variant.uses_quantum_backend else None
     )
     provenance["training_device"] = str(device)
     provenance["quantum_execution_device"] = (
         str(quantum_device) if quantum_device is not None else None
     )
     provenance["deterministic_algorithms"] = torch.are_deterministic_algorithms_enabled()
-    provenance["deterministic_warn_only"] = (
-        torch.is_deterministic_algorithms_warn_only_enabled()
-    )
+    provenance["deterministic_warn_only"] = torch.is_deterministic_algorithms_warn_only_enabled()
     provenance["backend_reproducibility"] = (
         "exploratory_only"
         if device.type == "mps" and config.variant.uses_distribution_regularizer
@@ -89,6 +90,21 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
         device,
         quantum_device,
     )
+    budget_schedule = None
+    budget_schedule_path = None
+    recorded_budget: list[CoverageBudgetTarget] = []
+    if config.coverage_budget_mode is CoverageBudgetMode.REPLAY:
+        assert config.coverage_budget_schedule is not None
+        budget_schedule_path = Path(config.coverage_budget_schedule).resolve()
+        budget_schedule = CoverageBudgetSchedule.read(budget_schedule_path)
+        budget_schedule.validate_for(config)
+        provenance["coverage_budget_schedule"] = str(budget_schedule_path)
+        provenance["coverage_budget_schedule_sha256"] = file_sha256(budget_schedule_path)
+    elif config.coverage_budget_mode is CoverageBudgetMode.RECORD:
+        budget_schedule_path = output_directory / "coverage-budget.json"
+    if config.coverage_budget_mode is not CoverageBudgetMode.FIXED:
+        provenance["coverage_budget_mode"] = config.coverage_budget_mode.value
+        provenance["coverage_budget_phase"] = coverage_budget_phase(config)
     if isinstance(
         regularizer_model,
         QuantumModularReference
@@ -124,11 +140,7 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
         )
         provenance["calibration_target_gradient_ratio"] = 0.1
     write_json(output_directory / "provenance.json", provenance)
-    generator_optimizer = torch.optim.Adam(
-        generator.parameters(),
-        lr=config.learning_rate_generator,
-        betas=(config.beta1, config.beta2),
-    )
+    generator_optimizer = _build_generator_optimizer(config, generator)
     discriminator_optimizer = torch.optim.Adam(
         discriminator.parameters(),
         lr=config.learning_rate_discriminator,
@@ -222,6 +234,11 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
                 )
             elif config.variant.uses_relational_coverage:
                 assert regularizer_model is not None
+                budget_target = None
+                if budget_schedule is not None:
+                    budget_target = budget_schedule.records[global_step]
+                    if budget_target.step != next_step:
+                        raise RuntimeError("coverage budget schedule was consumed out of order")
                 generator_metrics = relational_coverage_generator_step(
                     generator,
                     discriminator,
@@ -232,7 +249,20 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
                     generator_labels,
                     kde_weight=config.regularizer_weight,
                     coverage_weight=config.coverage_weight,
+                    budget_target=budget_target,
+                    record_budget=(config.coverage_budget_mode is CoverageBudgetMode.RECORD),
+                    match_angle_head_budget=config.match_angle_head_budget,
                 )
+                if config.coverage_budget_mode is not CoverageBudgetMode.FIXED:
+                    _validate_reference_budget_metrics(generator_metrics, config)
+                if config.coverage_budget_mode is CoverageBudgetMode.RECORD:
+                    recorded_budget.append(
+                        _budget_target_from_metrics(
+                            next_step,
+                            generator_metrics,
+                            include_angle=config.match_angle_head_budget,
+                        )
+                    )
             elif config.variant.uses_distribution_regularizer:
                 assert regularizer_model is not None
                 generator_metrics = distribution_regularized_generator_step(
@@ -290,6 +320,21 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
         if config.max_steps is not None and global_step >= config.max_steps:
             break
 
+    if budget_schedule is not None and global_step != len(budget_schedule.records):
+        raise RuntimeError("coverage budget schedule was not consumed exactly once")
+    if config.coverage_budget_mode is CoverageBudgetMode.RECORD:
+        assert budget_schedule_path is not None
+        schedule = CoverageBudgetSchedule(
+            metadata=coverage_budget_metadata(config),
+            records=tuple(recorded_budget),
+        )
+        if len(schedule.records) != config.max_steps:
+            raise RuntimeError("reference run did not record the frozen budget horizon")
+        schedule.write(budget_schedule_path)
+        provenance["coverage_budget_schedule"] = str(budget_schedule_path)
+        provenance["coverage_budget_schedule_sha256"] = file_sha256(budget_schedule_path)
+        write_json(output_directory / "provenance.json", provenance)
+
     _save_checkpoint(
         output_directory / "checkpoint-final.pt",
         config,
@@ -307,6 +352,12 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
         "quantum_device": str(quantum_device) if quantum_device is not None else None,
         "completed_steps": global_step,
         "last_metrics": last_record,
+        "coverage_budget_schedule": (
+            str(budget_schedule_path) if budget_schedule_path is not None else None
+        ),
+        "coverage_budget_schedule_sha256": (
+            file_sha256(budget_schedule_path) if budget_schedule_path is not None else None
+        ),
     }
     write_json(output_directory / "summary.json", summary)
     return summary
@@ -468,9 +519,7 @@ def _build_models(
             assert quantum_device is not None
             execution_device = quantum_device
             kernels = {
-                ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE: (
-                    RelationalKernel.QUANTUM_FULL
-                ),
+                ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE: (RelationalKernel.QUANTUM_FULL),
                 ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT: (
                     RelationalKernel.QUANTUM_PRODUCT
                 ),
@@ -483,6 +532,9 @@ def _build_models(
             execution_device = torch.device("cpu") if device.type == "mps" else device
             kernel = RelationalKernel.CLASSICAL_PERIODIC_RBF
         _zero_angle_residual_output(generator)
+        if config.freeze_angle_head:
+            for parameter in generator.angle_head.parameters():
+                parameter.requires_grad_(False)
         regularizer_model = KDERelationalCoverageReference(
             circuit_spec,
             num_classes=config.num_classes,
@@ -609,6 +661,90 @@ def _resolve_quantum_device(
 def _append_json_line(path: Path, payload: dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
+
+
+def _build_generator_optimizer(
+    config: ExperimentConfig,
+    generator: SharedQuantumGenerator,
+) -> torch.optim.Adam:
+    settings = {
+        "lr": config.learning_rate_generator,
+        "betas": (config.beta1, config.beta2),
+    }
+    if config.coverage_budget_mode is CoverageBudgetMode.FIXED:
+        return torch.optim.Adam(generator.parameters(), **settings)
+    shared_parameters = (
+        *generator.label_embedding.parameters(),
+        *generator.input_projection.parameters(),
+        *generator.image_decoder.parameters(),
+    )
+    groups: list[dict[str, Any]] = [{"params": shared_parameters, "name": "shared_image"}]
+    if config.match_angle_head_budget:
+        groups.append(
+            {
+                "params": tuple(generator.angle_head.parameters()),
+                "name": "angle_head",
+            }
+        )
+    return torch.optim.Adam(groups, **settings)
+
+
+def _validate_reference_budget_metrics(
+    metrics: Any,
+    config: ExperimentConfig,
+) -> None:
+    shared_error = metrics.coverage_shared_ratio_relative_error
+    if shared_error is None or not math.isfinite(shared_error):
+        raise RuntimeError("shared coverage budget did not produce a finite error")
+    if shared_error > 1e-5:
+        raise RuntimeError("shared coverage budget exceeded its frozen tolerance")
+    adam_error = metrics.coverage_shared_adam_ratio_relative_error
+    if adam_error is None or not math.isfinite(adam_error) or adam_error > 1e-4:
+        raise RuntimeError("shared Adam budget exceeded its frozen tolerance")
+    proposal_error = metrics.coverage_shared_adam_proposal_relative_error
+    if proposal_error is None or not math.isfinite(proposal_error) or proposal_error > 1e-5:
+        raise RuntimeError("analytical and realized Adam updates disagree")
+    if config.match_angle_head_budget:
+        angle_gradient_error = metrics.coverage_angle_gradient_relative_error
+        angle_update_error = metrics.coverage_angle_update_relative_error
+        if (
+            angle_gradient_error is None
+            or not math.isfinite(angle_gradient_error)
+            or angle_gradient_error > 1e-5
+        ):
+            raise RuntimeError("angle gradient budget exceeded its frozen tolerance")
+        if (
+            angle_update_error is None
+            or not math.isfinite(angle_update_error)
+            or angle_update_error > 1e-4
+        ):
+            raise RuntimeError("angle Adam update budget exceeded its frozen tolerance")
+
+
+def _budget_target_from_metrics(
+    step: int,
+    metrics: Any,
+    *,
+    include_angle: bool,
+) -> CoverageBudgetTarget:
+    required = {
+        "shared_ratio": metrics.coverage_shared_target_ratio,
+        "shared_anchor_gradient_norm": metrics.coverage_shared_anchor_gradient_norm,
+        "shared_coverage_gradient_norm": metrics.coverage_shared_gradient_norm,
+        "shared_weighted_coverage_gradient_norm": (metrics.coverage_shared_weighted_gradient_norm),
+        "shared_adam_update_norm": metrics.coverage_shared_adam_update_norm,
+        "shared_adam_auxiliary_ratio": metrics.coverage_shared_adam_auxiliary_ratio,
+    }
+    if any(value is None for value in required.values()):
+        raise RuntimeError("reference step did not expose every shared budget metric")
+    return CoverageBudgetTarget(
+        step=step,
+        **required,
+        angle_gradient_norm=(
+            metrics.coverage_angle_gradient_target_norm if include_angle else None
+        ),
+        angle_update_norm=(metrics.coverage_angle_update_target_norm if include_angle else None),
+    )
 
 
 def _save_checkpoint(

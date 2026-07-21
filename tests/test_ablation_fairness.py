@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 from torch.utils.data import TensorDataset
 
-from vqe_gan.config import ExperimentConfig, ExperimentVariant
+from vqe_gan.config import CoverageBudgetMode, ExperimentConfig, ExperimentVariant
 from vqe_gan.data import create_seeded_data_loader
 from vqe_gan.regularizers import KDERelationalCoverageReference, RelationalKernel
 from vqe_gan.runner import _balanced_reference_batch, _build_models
@@ -29,9 +29,7 @@ def test_all_variants_use_identical_neural_architectures_and_parameter_counts() 
             torch.device("cpu"),
             torch.device("cpu") if uses_quantum else None,
         )
-        structures.append(
-            (tuple(generator.state_dict()), tuple(discriminator.state_dict()))
-        )
+        structures.append((tuple(generator.state_dict()), tuple(discriminator.state_dict())))
         counts.append(
             (
                 sum(parameter.numel() for parameter in generator.parameters()),
@@ -114,6 +112,30 @@ def test_relational_variants_start_from_identical_image_paths_and_zero_residuals
         output_layer = generator.angle_head[-2]
         assert torch.count_nonzero(output_layer.weight) == 0
         assert torch.count_nonzero(output_layer.bias) == 0
+
+
+def test_phase_a_freezes_an_exactly_zero_angle_head() -> None:
+    config = ExperimentConfig(
+        run_name="phase-a-full",
+        variant=ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+        max_steps=1,
+        regularizer_weight=2e-5,
+        coverage_weight=(ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE.default_coverage_weight),
+        coverage_budget_mode=CoverageBudgetMode.RECORD,
+        freeze_angle_head=True,
+    )
+    generator, _, _ = _build_models(
+        config,
+        torch.device("cpu"),
+        torch.device("cpu"),
+    )
+    noise = torch.randn(2, generator.latent_dim)
+    labels = torch.tensor([1, 7], dtype=torch.long)
+
+    _, residuals = generator.forward_with_angles(noise, labels)
+
+    assert torch.count_nonzero(residuals) == 0
+    assert not any(parameter.requires_grad for parameter in generator.angle_head.parameters())
 
 
 def test_relational_circuit_ablations_change_only_the_frozen_kernel_mode() -> None:

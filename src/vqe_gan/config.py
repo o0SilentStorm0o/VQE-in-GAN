@@ -127,6 +127,14 @@ class ExperimentVariant(str, Enum):
         return 0.0
 
 
+class CoverageBudgetMode(str, Enum):
+    """How a relational run obtains its per-step quantum gradient budget."""
+
+    FIXED = "fixed"
+    RECORD = "record"
+    REPLAY = "replay"
+
+
 @dataclass(frozen=True)
 class ExperimentConfig:
     """Complete configuration required to reproduce one training run."""
@@ -173,6 +181,10 @@ class ExperimentConfig:
     coverage_weight: float = 0.0
     coverage_temperature: float = 0.10
     angle_residual_fraction: float = 0.10
+    coverage_budget_mode: CoverageBudgetMode = CoverageBudgetMode.FIXED
+    coverage_budget_schedule: str | None = None
+    freeze_angle_head: bool = False
+    match_angle_head_budget: bool = False
     gradient_diagnostics_every_steps: int = 0
     log_every_steps: int = 1
     checkpoint_every_steps: int = 0
@@ -181,6 +193,12 @@ class ExperimentConfig:
     def __post_init__(self) -> None:
         if isinstance(self.variant, str):
             object.__setattr__(self, "variant", ExperimentVariant(self.variant))
+        if isinstance(self.coverage_budget_mode, str):
+            object.__setattr__(
+                self,
+                "coverage_budget_mode",
+                CoverageBudgetMode(self.coverage_budget_mode),
+            )
         if not self.run_name or Path(self.run_name).name != self.run_name:
             raise ValueError("run_name must be one non-empty path component")
         if self.seed < 0:
@@ -261,6 +279,34 @@ class ExperimentConfig:
             raise ValueError("relational coverage variants require a calibrated coverage_weight")
         if not self.variant.uses_relational_coverage and self.coverage_weight != 0:
             raise ValueError("coverage_weight is only valid for relational coverage variants")
+        budget_requested = self.coverage_budget_mode is not CoverageBudgetMode.FIXED
+        if budget_requested and not self.variant.uses_relational_coverage:
+            raise ValueError("coverage budget modes are only valid for relational variants")
+        if budget_requested and self.coverage_weight != (
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE.default_coverage_weight
+        ):
+            raise ValueError("reference-budget runs require the frozen full coverage coefficient")
+        if self.coverage_budget_mode is CoverageBudgetMode.RECORD:
+            if self.variant is not ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE:
+                raise ValueError("only the full relational variant may record a budget schedule")
+            if self.coverage_budget_schedule is not None:
+                raise ValueError("record mode writes its schedule inside the run directory")
+        if self.coverage_budget_mode is CoverageBudgetMode.REPLAY:
+            if self.variant not in {
+                ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+                ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
+            }:
+                raise ValueError("only relational circuit controls may replay a budget schedule")
+            if not self.coverage_budget_schedule:
+                raise ValueError("replay mode requires coverage_budget_schedule")
+        elif self.coverage_budget_schedule is not None:
+            raise ValueError("coverage_budget_schedule is only valid in replay mode")
+        if (self.freeze_angle_head or self.match_angle_head_budget) and not budget_requested:
+            raise ValueError("angle-head budget controls require record or replay mode")
+        if self.freeze_angle_head and self.match_angle_head_budget:
+            raise ValueError("a frozen angle head cannot request a trainable angle budget")
+        if budget_requested and self.max_steps is None:
+            raise ValueError("record and replay modes require a finite max_steps")
 
     @property
     def output_directory(self) -> Path:
@@ -269,4 +315,5 @@ class ExperimentConfig:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["variant"] = self.variant.value
+        payload["coverage_budget_mode"] = self.coverage_budget_mode.value
         return payload

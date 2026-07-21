@@ -6,7 +6,7 @@ import argparse
 import json
 from collections.abc import Sequence
 
-from vqe_gan.config import ExperimentConfig, ExperimentVariant
+from vqe_gan.config import CoverageBudgetMode, ExperimentConfig, ExperimentVariant
 from vqe_gan.runner import run_experiment
 
 
@@ -50,6 +50,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--coverage-weight", type=float)
     parser.add_argument("--coverage-temperature", type=float, default=0.10)
     parser.add_argument("--angle-residual-fraction", type=float, default=0.10)
+    parser.add_argument(
+        "--coverage-budget-mode",
+        choices=[mode.value for mode in CoverageBudgetMode],
+        default=CoverageBudgetMode.FIXED.value,
+    )
+    parser.add_argument("--coverage-budget-schedule")
+    parser.add_argument("--freeze-angle-head", action="store_true")
+    parser.add_argument("--match-angle-head-budget", action="store_true")
     parser.add_argument("--gradient-diagnostics-every-steps", type=int, default=0)
     parser.add_argument("--checkpoint-every-steps", type=int, default=0)
     parser.add_argument("--no-download", action="store_true")
@@ -86,9 +94,7 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
         rbf_sigma_squared=arguments.rbf_sigma_squared,
         coherence_gradient_ratio=arguments.coherence_gradient_ratio,
         reference_samples_per_class=arguments.reference_samples_per_class,
-        contrastive_reference_samples_per_class=(
-            arguments.contrastive_reference_samples_per_class
-        ),
+        contrastive_reference_samples_per_class=(arguments.contrastive_reference_samples_per_class),
         contrastive_angle_scale=arguments.contrastive_angle_scale,
         contrastive_quantum_temperature=arguments.contrastive_quantum_temperature,
         kde_sigma_squared=arguments.kde_sigma_squared,
@@ -97,6 +103,10 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
         coverage_weight=coverage_weight,
         coverage_temperature=arguments.coverage_temperature,
         angle_residual_fraction=arguments.angle_residual_fraction,
+        coverage_budget_mode=arguments.coverage_budget_mode,
+        coverage_budget_schedule=arguments.coverage_budget_schedule,
+        freeze_angle_head=arguments.freeze_angle_head,
+        match_angle_head_budget=arguments.match_angle_head_budget,
         gradient_diagnostics_every_steps=arguments.gradient_diagnostics_every_steps,
         checkpoint_every_steps=arguments.checkpoint_every_steps,
         download_dataset=not arguments.no_download,

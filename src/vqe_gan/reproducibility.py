@@ -45,9 +45,21 @@ def collect_provenance(repository_root: Path) -> dict[str, Any]:
     lock_path = repository_root / "uv.lock"
     revision = _git_output(repository_root, "rev-parse", "HEAD")
     status = _git_output(repository_root, "status", "--porcelain")
+    tracked_status = _git_output(
+        repository_root,
+        "status",
+        "--porcelain",
+        "--untracked-files=no",
+    )
     return {
         "source_revision": revision,
         "source_dirty": bool(status),
+        "source_tracked_dirty": bool(tracked_status),
+        "source_dirty_reason": (
+            "untracked files only; tracked sources match source_revision"
+            if status and not tracked_status
+            else None
+        ),
         "uv_lock_sha256": file_sha256(lock_path),
         "python": platform.python_version(),
         "platform": platform.platform(),
