@@ -191,3 +191,57 @@ mechanism may be designed under a new protocol, but it is a new candidate.
 
 Passing this gate is not confirmatory evidence. It only licenses the causal circuit ablations and,
 if those isolate a coherent entangling contribution, a separately frozen run on untouched seeds.
+
+## Development result
+
+The four frozen variants were run from source revision
+`22c72c51aa40b5d757e7a5b05074779f8767242d`. Every run completed 200 deterministic CPU steps and
+used the same 5,000-sample evaluation.
+
+| Variant | Mean accuracy | Mean FID | Mean class-FID | Mean precision | Mean recall | Mean diversity |
+|---|---:|---:|---:|---:|---:|---:|
+| Exact log-KDE | 0.6689 | 0.4003 | 0.4649 | 0.5351 | 0.0215 | 0.5360 |
+| `0.95` KDE scale control | 0.6710 | 0.3415 | 0.4025 | 0.4588 | 0.0290 | 0.5665 |
+| Matched classical coverage | 0.6817 | 0.3450 | 0.4062 | 0.4575 | 0.0200 | 0.5614 |
+| Full quantum coverage | 0.6736 | 0.3381 | 0.4023 | 0.4332 | 0.0272 | 0.5745 |
+
+Against exact KDE, the quantum candidate changes mean accuracy by `+0.0047`, class-FID by
+`-0.0626`, and diversity by `+0.0385`. Class-FID improves on seed 42 by `-0.0530` and on seed 43
+by `-0.0722`. Against matched classical coverage, its mean class-FID is lower by only `0.0040`;
+the sign reverses between seeds. Its mean metrics are also close to the scale-only trajectory.
+Therefore this is a passed development gate, not evidence that the circuit caused the gain.
+
+The mechanism audit confirms that all 29,200 angle-head values changed in both quantum runs. At
+the final checkpoints, both the angle-head and image-producing gradients remain nonzero, and the
+direct image path carries more than 99% of the full shared-gradient norm. The branch is thus
+trainable and image-coupled without being able to hide the loss entirely in the angle head.
+
+All six preregistered checks pass. Full values, configurations, checkpoint hashes, timings, and
+post-run gradients are preserved in
+[`relational_coverage_development_results.json`](relational_coverage_development_results.json),
+SHA-256 `90b2b104e5d07f4461b07ff7ea516ae66db88c54f1286992388b5e04b81d5fab`.
+
+## Frozen circuit-ablation follow-up
+
+Passing the development gate licenses exactly two new controls:
+
+- `quantum_kde_relational_product`: remove the CNOT ring from both generated and reference
+  circuits;
+- `quantum_kde_relational_dephased`: retain the ring but replace state overlap with squared
+  Bhattacharyya overlap of computational-basis probabilities.
+
+Both retain exact KDE weight `2e-5`, quantum coverage weight `0.0005662128371831583`, the same
+angle-head initialization and residual bound, the same references, and the same 200-step/evaluation
+protocol. Their weights are not recalibrated. The full variant is rerun alongside both controls on
+seeds 42 and 43. Its checkpoint hashes must exactly reproduce the development checkpoints before
+the ablations are interpreted.
+
+The circuit-specific gate passes only if:
+
+1. full quantum mean class-FID is at least `0.005` lower than both product and dephased means;
+2. full quantum mean diversity is no more than `0.005` below either control;
+3. full quantum mean accuracy is no more than `0.005` below either control;
+4. the exact full-run replay and all structural checks pass.
+
+If product or dephased matches or beats the full circuit under this rule, the development gain is
+not isolated to coherent entangling geometry. No held-out run is licensed in that case.
