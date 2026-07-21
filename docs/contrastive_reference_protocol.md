@@ -110,6 +110,39 @@ dephased ablations are run on the same two seeds, followed by the preregistered 
 505. Confirmatory claims require paired uncertainty intervals over the complete frozen set and a
 longer-horizon follow-up; a single favorable seed is never sufficient.
 
+## Stage 1 result
+
+Stage 1 was executed on CPU from source revision
+`1917d0648ab6d9d21a217729533167807b9c8096`, without changing the frozen configuration. Every row
+uses the same 5,000 balanced evaluation samples and evaluation seed `91001`.
+
+| Seed | Variant | Accuracy | FID | Class-FID | Precision | Recall | Diversity |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 101 | Log-KDE | 0.7192 | 0.2894 | 0.3471 | 0.4972 | 0.0458 | 0.6173 |
+| 101 | Full hybrid | 0.7358 | 0.3117 | 0.3662 | 0.5318 | 0.0254 | 0.6018 |
+| 202 | Log-KDE | 0.7498 | 0.2646 | 0.3129 | 0.5740 | 0.0432 | 0.6001 |
+| 202 | Full hybrid | 0.7486 | 0.2586 | 0.3055 | 0.5138 | 0.0348 | 0.6147 |
+
+The paired `full - KDE` differences reverse sign between seeds:
+
+| Seed | Accuracy difference | Class-FID difference |
+|---:|---:|---:|
+| 101 | +0.01660 | +0.01913 |
+| 202 | -0.00120 | -0.00742 |
+| **Mean** | **+0.00770** | **+0.00585** |
+
+The mean accuracy condition passes, but the mean class-FID condition fails because positive FID
+differences are worse. Candidate 4 is therefore **rejected at Stage 1**. Per the frozen rule, the
+product and dephased variants and seeds 303, 404, and 505 are not run, and this candidate receives
+no post-hoc tuning.
+
+The machine-readable metrics, run times, source revision, classifier digest, and checkpoint
+digests are preserved in
+[`contrastive_stage1_results.json`](contrastive_stage1_results.json). The run provenance reports a
+dirty worktree only because the repository contained a pre-existing untracked PDF and temporary
+directory; there were no tracked source changes relative to the recorded revision during either
+run, and neither untracked item participates in the experiment.
+
 ## Command
 
 ```bash

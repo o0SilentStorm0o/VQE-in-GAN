@@ -65,13 +65,14 @@ control with the same real-data access, pooled input, generator architecture, an
 budget. Dephased, product-circuit, entropy-free, and label-alignment removals are mechanism checks,
 not substitutes for the classical control.
 
-**Current status:** three original real-data-anchored candidates were explored. Class-conditional modular
-free energy was seed-dependent and weaker on average than RBF-MMD; an orthogonal coherence-residual
-augmentation harmed the RBF baseline; and a stable modular reference bank improved the primary
-class-FID screen on three seeds, including held-out seed 314, but failed sharply on held-out seed
-729. A fourth, separate candidate fixes the target-only objective with centered all-class modular
-logits and tests only a 5% quantum addition over a stronger log-KDE control. It passes product and
-dephased development checks on seed 42 and improves the classical control on development seeds 42
-and 43. Its untouched seeds, fixed parameters, and stop rule are preregistered in
-`contrastive_reference_protocol.md`. No positive claim is authorized until that falsification stage
-passes.
+**Current status:** three original real-data-anchored candidates were explored. Class-conditional
+modular free energy was seed-dependent and weaker on average than RBF-MMD; an orthogonal
+coherence-residual augmentation harmed the RBF baseline; and a stable modular reference bank
+improved the primary class-FID screen on three seeds, including held-out seed 314, but failed
+sharply on held-out seed 729. A fourth, separate candidate fixes the target-only objective with
+centered all-class modular logits and tests only a 5% quantum addition over a stronger log-KDE
+control. It passed product and dephased development checks on seed 42 and improved the classical
+control on development seeds 42 and 43. On the frozen seeds 101 and 202 it improved mean
+conditional accuracy by 0.77 percentage points but worsened mean class-FID by 0.00585. It therefore
+failed the preregistered Stage 1 gate in `contrastive_reference_protocol.md`; later seeds and causal
+ablations are not authorized for this candidate.

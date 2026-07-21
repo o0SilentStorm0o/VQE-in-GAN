@@ -8,10 +8,12 @@ None of the numbers below are preregistered results. The purpose is to answer a 
 > Does a four-qubit auxiliary circuit provide a reproducible benefit to the corrected ACGAN that
 > cannot be explained by real-data access, gradient scaling, or a matched classical feature map?
 
-The current answer is **no evidence yet**. Several quantum losses improve a weak ACGAN trajectory,
-but the improvement is seed-dependent and equal or stronger classical controls explain it. This
-does not prove that every possible quantum-assisted GAN must fail. It does reject the mechanisms
-tested here and prevents them from being promoted to a confirmatory claim.
+The current answer is **no robust quantum-specific benefit in the tested architecture**. Several
+quantum losses improve individual ACGAN trajectories, but the improvement is seed-dependent and
+equal or stronger classical controls explain it. The strongest class-contrastive candidate also
+failed its frozen held-out class-FID gate. This does not prove that every possible quantum-assisted
+GAN must fail. It does reject the mechanisms tested here and prevents them from being promoted to
+a confirmatory claim.
 
 ## Evidence required for a quantum-specific claim
 
@@ -278,6 +280,23 @@ that the full circuit's narrow contribution is class separation rather than gene
 This is encouraging development evidence only. The complete frozen held-out sequence and stop
 rule are specified in [contrastive_reference_protocol.md](contrastive_reference_protocol.md).
 
+### Frozen Stage 1 outcome
+
+The untouched seeds 101 and 202 were run exactly once at the frozen 200-step horizon before any
+candidate change. The paired effects reverse sign:
+
+| Seed | Accuracy, KDE | Accuracy, hybrid | Class-FID, KDE | Class-FID, hybrid |
+|---:|---:|---:|---:|---:|
+| 101 | 0.7192 | 0.7358 | 0.3471 | 0.3662 |
+| 202 | 0.7498 | 0.7486 | 0.3129 | 0.3055 |
+| **Mean** | **0.7345** | **0.7422** | **0.3300** | **0.3358** |
+
+The hybrid improves mean conditional accuracy by 0.00770 but worsens mean class-FID by 0.00585.
+The frozen rule required both an accuracy improvement and a class-FID reduction. Candidate 4
+therefore fails Stage 1, and its product/dephased controls and later seeds are not run. Exact
+metrics and artifact digests are in
+[contrastive_stage1_results.json](contrastive_stage1_results.json).
+
 ### Hardware interpretation
 
 The improved Hamiltonians are dense. Aggregated squared Pauli-coefficient mass is 4.2% at weight
@@ -298,16 +317,16 @@ The experiments support four statements:
    trajectories, including a held-out screening seed.
 2. The original target-only modular loss is not robust and is explained largely by prototype
    fidelity, reference stability, and gradient scaling.
-3. A centered class-contrastive score exposes a small contribution that disappears under product
-   and dephased removals and improves a strong log-KDE control on two development seeds. It has not
-   yet passed the frozen held-out sequence.
+3. A centered class-contrastive score exposes a small development-set contribution that disappears
+   under product and dephased removals, but it fails the frozen held-out class-FID gate against the
+   strong log-KDE control.
 4. With four noiselessly simulated qubits, every tested quantum layer is a small differentiable
    classical computation. These experiments can study inductive bias, but they cannot establish a
    computational quantum advantage.
 
 The honest result for the present architecture is therefore **no robust demonstrated
-quantum-specific benefit yet**. Candidate 4 is now frozen; further tuning on inspected seeds is
-prohibited.
+quantum-specific benefit**. Candidate 4 is rejected under its frozen rule; further tuning on its
+inspected seeds is prohibited.
 
 ## Defensible next decision
 
@@ -316,15 +335,16 @@ There are now three coherent research directions:
 - Treat the corrected work as a rigorous negative benchmark. Freeze the original four-way
   ablation, run enough paired seeds to quantify equivalence, and make the causal-audit methodology
   the contribution.
-- Execute the candidate-4 falsification stage exactly as frozen: log-KDE versus full hybrid on
-  untouched seeds 101 and 202, followed by causal ablations only if the preregistered mean accuracy
-  and class-FID gates pass.
+- Treat Candidate 4 as a completed falsification result. Its accuracy/class-FID trade-off can be
+  analyzed descriptively, but it cannot be rescued by retuning on seeds 101 or 202. A materially
+  new mechanism would require a new development split and a new untouched test set.
 - Start a genuinely new study in which the quantum resource is operational rather than a
   four-qubit simulator feature map: a circuit family and qubit count that are not cheaply emulated,
   an explicit hardware/noise model, and a compute- or sample-efficiency claim against strong
   classical kernels. That is a new experiment, not a cosmetic repair of the current one.
 
-The frozen falsification pair can be run without changing the default four-way matrix:
+The completed frozen falsification pair can be reproduced without changing the default four-way
+matrix:
 
 ```bash
 uv run python scripts/run_seed_matrix.py \
@@ -338,9 +358,13 @@ uv run python scripts/run_seed_matrix.py \
   --variants classical_log_kde_contrastive hybrid_modular_kde_contrastive
 ```
 
+Repeat with seed 202 and a distinct output root for the second pair. The remaining frozen seeds and
+causal ablations are intentionally absent because Stage 1 failed.
+
 Every run records the balanced reference size, generator label source, device placement, source
-revision, configuration, and checkpoint digest. The exploratory output directories used to make
-the decisions above are not treated as confirmatory artifacts.
+revision, configuration, and checkpoint digest. The development output directories used to design
+the candidate are not treated as confirmatory artifacts. The frozen Stage 1 summary and checkpoint
+digests are retained separately.
 
 ## Related primary literature
 

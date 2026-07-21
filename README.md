@@ -2,9 +2,10 @@
 
 > **Experiment redesign in progress:** The original notebooks and result artifacts are retained as
 > a historical record. The modular implementation under `src/` now passes backend, gradient, and
-> optimizer-isolation tests. The original mechanism remains a negative result. A new frozen
-> class-contrastive candidate has promising development evidence but has not passed held-out
-> falsification. The complete evidence and stopping rules are recorded in
+> optimizer-isolation tests. The original mechanism remains a negative result. A frozen
+> class-contrastive candidate improved mean conditional accuracy by 0.77 percentage points over
+> its classical control, but worsened mean class-FID and therefore failed its held-out stop rule.
+> The complete evidence and stopping rules are recorded in
 > [`docs/quantum_utility_audit.md`](docs/quantum_utility_audit.md).
 
 The historical and corrected Hamiltonian families, including the class-separation objective, are
@@ -155,7 +156,7 @@ distribution-regularizer replays were not deterministic and are not admissible a
 evidence. Full-step benchmark methodology and results are recorded in
 [`docs/training_step_benchmark.md`](docs/training_step_benchmark.md).
 
-The frozen CPU falsification pair can be run with:
+The completed CPU falsification pair can be reproduced one seed at a time with:
 
 ```bash
 uv run python scripts/run_seed_matrix.py \
@@ -167,6 +168,10 @@ uv run python scripts/run_seed_matrix.py \
   --device cpu --quantum-device cpu \
   --variants classical_log_kde_contrastive hybrid_modular_kde_contrastive
 ```
+
+Run the same command with `--seed 202` and a distinct output root for the second pair. Stage 1
+failed its preregistered class-FID gate, so later seeds and causal ablations were intentionally not
+run.
 
 The tested LUMI-G setup, measured MI250X timings, allocation accounting, and the frozen ten-seed
 job-array projection are recorded in [`docs/lumi_g_benchmark.md`](docs/lumi_g_benchmark.md). The

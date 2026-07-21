@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "experiment": "frozen_contrastive_reference_stage1",
+  "source_revision": "1917d0648ab6d9d21a217729533167807b9c8096",
+  "source_dirty": true,
+  "source_dirty_reason": "Pre-existing untracked PDF and temporary directory; tracked experiment sources matched source_revision.",
+  "device": "cpu",
+  "quantum_device": "cpu",
+  "steps": 200,
+  "evaluation_samples": 5000,
+  "evaluation_seed": 91001,
+  "classifier_sha256": "e9dcb79e44703f86afe208bca8f548fcc715dcc0c464a19e591b5a6fef0eefb8",
+  "variants": [
+    "classical_log_kde_contrastive",
+    "hybrid_modular_kde_contrastive"
+  ],
+  "runs": [
+    {
+      "seed": 101,
+      "total_seconds": 330.1554947079858,
+      "variants": {
+        "classical_log_kde_contrastive": {
+          "training_seconds": 157.02256487496197,
+          "evaluation_seconds": 8.695205957978033,
+          "checkpoint_sha256": "0899f2b8f06ac29d589343663672461614b274d7ef71403d435bf1fff3a673eb",
+          "metrics": {
+            "conditional_accuracy": 0.7192000150680542,
+            "feature_fid_64": 0.28943515622348837,
+            "class_conditional_feature_fid_64": 0.3471012495494825,
+            "feature_precision": 0.49720001220703125,
+            "feature_recall": 0.04580000042915344,
+            "generated_intra_class_diversity": 0.3770381510257721,
+            "real_intra_class_diversity": 0.6107942461967468,
+            "diversity_ratio": 0.6172915893911711
+          }
+        },
+        "hybrid_modular_kde_contrastive": {
+          "training_seconds": 155.8169014590094,
+          "evaluation_seconds": 8.620666125090793,
+          "checkpoint_sha256": "c141c40a480322d34ea41de1b7bdb0256bc9d5db72641b72fa87a513ea4624f8",
+          "metrics": {
+            "conditional_accuracy": 0.73580002784729,
+            "feature_fid_64": 0.3117150413718279,
+            "class_conditional_feature_fid_64": 0.3662295066927702,
+            "feature_precision": 0.5317999720573425,
+            "feature_recall": 0.02539999969303608,
+            "generated_intra_class_diversity": 0.3675980865955353,
+            "real_intra_class_diversity": 0.6107942461967468,
+            "diversity_ratio": 0.6018361975157276
+          }
+        }
+      },
+      "delta_hybrid_minus_classical": {
+        "conditional_accuracy": 0.01660001277923584,
+        "class_conditional_feature_fid_64": 0.019128257143287697
+      }
+    },
+    {
+      "seed": 202,
+      "total_seconds": 334.8917147500906,
+      "variants": {
+        "classical_log_kde_contrastive": {
+          "training_seconds": 157.7132152080303,
+          "evaluation_seconds": 8.851843624957837,
+          "checkpoint_sha256": "ae459e43674f1b723b1f47f6dc81f86c099d2d1345dc2e5e892a4e318dca1871",
+          "metrics": {
+            "conditional_accuracy": 0.7498000264167786,
+            "feature_fid_64": 0.2645706015798052,
+            "class_conditional_feature_fid_64": 0.3128768413277595,
+            "feature_precision": 0.5740000009536743,
+            "feature_recall": 0.04320000112056732,
+            "generated_intra_class_diversity": 0.3665180206298828,
+            "real_intra_class_diversity": 0.6107942461967468,
+            "diversity_ratio": 0.6000678999713782
+          }
+        },
+        "hybrid_modular_kde_contrastive": {
+          "training_seconds": 159.50247124989983,
+          "evaluation_seconds": 8.824046374997124,
+          "checkpoint_sha256": "2f3675f6eca0148d8f7c47e3f5680c8887cfb31a4360e0fd4d6f3f19bf55bae3",
+          "metrics": {
+            "conditional_accuracy": 0.7486000061035156,
+            "feature_fid_64": 0.2586263905128477,
+            "class_conditional_feature_fid_64": 0.30545753709130513,
+            "feature_precision": 0.5138000249862671,
+            "feature_recall": 0.03480000048875809,
+            "generated_intra_class_diversity": 0.3754539489746094,
+            "real_intra_class_diversity": 0.6107942461967468,
+            "diversity_ratio": 0.6146979139251249
+          }
+        }
+      },
+      "delta_hybrid_minus_classical": {
+        "conditional_accuracy": -0.0012000203132629395,
+        "class_conditional_feature_fid_64": -0.0074193042364543715
+      }
+    }
+  ],
+  "mean_metrics": {
+    "classical_log_kde_contrastive": {
+      "conditional_accuracy": 0.7345000207424164,
+      "class_conditional_feature_fid_64": 0.329989045438621
+    },
+    "hybrid_modular_kde_contrastive": {
+      "conditional_accuracy": 0.7422000169754028,
+      "class_conditional_feature_fid_64": 0.3358435218920377
+    },
+    "delta_hybrid_minus_classical": {
+      "conditional_accuracy": 0.00769999623298645,
+      "class_conditional_feature_fid_64": 0.00585447645341669
+    }
+  },
+  "stop_rule": {
+    "requires_positive_mean_accuracy_delta": true,
+    "requires_negative_mean_class_fid_delta": true,
+    "accuracy_gate_passed": true,
+    "class_fid_gate_passed": false,
+    "stage1_passed": false,
+    "decision": "reject_candidate_and_stop"
+  }
+}
