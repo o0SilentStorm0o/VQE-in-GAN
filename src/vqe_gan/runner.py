@@ -461,11 +461,24 @@ def _build_models(
     elif config.variant in {
         ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
         ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+        ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+        ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
     }:
-        if config.variant is ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE:
+        if config.variant is not ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE:
             assert quantum_device is not None
             execution_device = quantum_device
-            kernel = RelationalKernel.QUANTUM_FULL
+            kernels = {
+                ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE: (
+                    RelationalKernel.QUANTUM_FULL
+                ),
+                ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT: (
+                    RelationalKernel.QUANTUM_PRODUCT
+                ),
+                ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED: (
+                    RelationalKernel.QUANTUM_DEPHASED
+                ),
+            }
+            kernel = kernels[config.variant]
         else:
             execution_device = torch.device("cpu") if device.type == "mps" else device
             kernel = RelationalKernel.CLASSICAL_PERIODIC_RBF

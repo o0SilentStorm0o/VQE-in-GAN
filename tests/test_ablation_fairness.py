@@ -5,6 +5,7 @@ from torch.utils.data import TensorDataset
 
 from vqe_gan.config import ExperimentConfig, ExperimentVariant
 from vqe_gan.data import create_seeded_data_loader
+from vqe_gan.regularizers import KDERelationalCoverageReference, RelationalKernel
 from vqe_gan.runner import _balanced_reference_batch, _build_models
 
 
@@ -113,3 +114,27 @@ def test_relational_variants_start_from_identical_image_paths_and_zero_residuals
         output_layer = generator.angle_head[-2]
         assert torch.count_nonzero(output_layer.weight) == 0
         assert torch.count_nonzero(output_layer.bias) == 0
+
+
+def test_relational_circuit_ablations_change_only_the_frozen_kernel_mode() -> None:
+    expected = {
+        ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE: RelationalKernel.QUANTUM_FULL,
+        ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT: RelationalKernel.QUANTUM_PRODUCT,
+        ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED: RelationalKernel.QUANTUM_DEPHASED,
+    }
+    generator_states = []
+    for variant, kernel in expected.items():
+        torch.manual_seed(97)
+        generator, _, regularizer = _build_models(
+            _config(variant),
+            torch.device("cpu"),
+            torch.device("cpu"),
+        )
+        assert isinstance(regularizer, KDERelationalCoverageReference)
+        assert regularizer.coverage.kernel is kernel
+        generator_states.append(generator.state_dict())
+
+    first = generator_states[0]
+    for control in generator_states[1:]:
+        for name in first:
+            torch.testing.assert_close(first[name], control[name], atol=0, rtol=0)

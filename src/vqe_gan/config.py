@@ -26,6 +26,8 @@ class ExperimentVariant(str, Enum):
     CLASSICAL_LOG_KDE_SCALE_CONTROL = "classical_log_kde_scale_control"
     CLASSICAL_KDE_RELATIONAL_COVERAGE = "classical_kde_relational_coverage"
     QUANTUM_KDE_RELATIONAL_COVERAGE = "quantum_kde_relational_coverage"
+    QUANTUM_KDE_RELATIONAL_PRODUCT = "quantum_kde_relational_product"
+    QUANTUM_KDE_RELATIONAL_DEPHASED = "quantum_kde_relational_dephased"
     HYBRID_MODULAR_KDE_CONTRASTIVE = "hybrid_modular_kde_contrastive"
     HYBRID_MODULAR_KDE_PRODUCT = "hybrid_modular_kde_product"
     HYBRID_MODULAR_KDE_DEPHASED = "hybrid_modular_kde_dephased"
@@ -46,6 +48,8 @@ class ExperimentVariant(str, Enum):
             ExperimentVariant.CLASSICAL_LOG_KDE_SCALE_CONTROL,
             ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
             ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
             ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
             ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
             ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
@@ -64,6 +68,8 @@ class ExperimentVariant(str, Enum):
             ExperimentVariant.QUANTUM_COHERENCE_GUIDANCE,
             ExperimentVariant.QUANTUM_MODULAR_REFERENCE,
             ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
             ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
             ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
             ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
@@ -78,6 +84,8 @@ class ExperimentVariant(str, Enum):
         return self in {
             ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
             ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
         }
 
     @property
@@ -87,6 +95,8 @@ class ExperimentVariant(str, Enum):
             ExperimentVariant.CLASSICAL_LOG_KDE_SCALE_CONTROL,
             ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE,
             ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
             ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
             ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
             ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
@@ -108,7 +118,11 @@ class ExperimentVariant(str, Enum):
 
         if self is ExperimentVariant.CLASSICAL_KDE_RELATIONAL_COVERAGE:
             return 0.0033809364895852783
-        if self is ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE:
+        if self in {
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_COVERAGE,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_PRODUCT,
+            ExperimentVariant.QUANTUM_KDE_RELATIONAL_DEPHASED,
+        }:
             return 0.0005662128371831583
         return 0.0
 
