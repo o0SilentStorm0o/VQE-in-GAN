@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import datasets, transforms
 
 from vqe_gan.config import ExperimentConfig, ExperimentVariant
@@ -20,7 +20,19 @@ from vqe_gan.quantum.spec import (
     QuantumCircuitSpec,
 )
 from vqe_gan.quantum.torch_backend import DeviceBridgedEnergy, TorchStatevectorEnergy
-from vqe_gan.regularizers import ClassicalPrototypeEnergy, PermutedClassEnergy
+from vqe_gan.regularizers import (
+    ClassConditionalLogKDEReference,
+    ClassConditionalRBFMMD,
+    ClassConditionalRBFReferenceMMD,
+    ClassicalPrototypeEnergy,
+    HybridQuantumKDEContrastiveReference,
+    ModularAblation,
+    PermutedClassEnergy,
+    QuantumDensityMMD,
+    QuantumModularFreeEnergy,
+    QuantumModularReference,
+    RBFQuantumCoherenceGuidance,
+)
 from vqe_gan.reproducibility import (
     collect_provenance,
     resolve_device,
@@ -28,8 +40,11 @@ from vqe_gan.reproducibility import (
     write_json,
 )
 from vqe_gan.training import (
+    coherence_guided_generator_step,
     discriminator_step,
+    distribution_regularized_generator_step,
     generator_step,
+    measure_distribution_gradient_diagnostics,
     measure_gradient_diagnostics,
 )
 
@@ -42,24 +57,62 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
     output_directory.mkdir(parents=True, exist_ok=False)
     write_json(output_directory / "config.json", config.to_dict())
     provenance = collect_provenance(repository_root)
-    provenance["energy_model"] = config.variant.value
+    provenance["regularizer_model"] = config.variant.value
+    provenance["generator_label_source"] = "paired_real_batch"
 
     seed_everything(config.seed)
     device = resolve_device(config.device)
     quantum_device = (
         _resolve_quantum_device(config, device)
-        if config.variant
-        in {ExperimentVariant.QUANTUM_CONTRASTIVE, ExperimentVariant.QUANTUM_PERMUTED}
+        if config.variant.uses_quantum_backend
         else None
     )
     provenance["training_device"] = str(device)
     provenance["quantum_execution_device"] = (
         str(quantum_device) if quantum_device is not None else None
     )
+    provenance["deterministic_algorithms"] = torch.are_deterministic_algorithms_enabled()
+    provenance["deterministic_warn_only"] = (
+        torch.is_deterministic_algorithms_warn_only_enabled()
+    )
+    provenance["backend_reproducibility"] = (
+        "exploratory_only"
+        if device.type == "mps" and config.variant.uses_distribution_regularizer
+        else "confirmation_eligible_after_paired_replay"
+    )
     data_loader = _build_data_loader(config, device)
-    generator, discriminator, energy_model = _build_models(config, device, quantum_device)
+    generator, discriminator, regularizer_model = _build_models(
+        config,
+        device,
+        quantum_device,
+    )
+    if isinstance(
+        regularizer_model,
+        QuantumModularReference
+        | ClassConditionalRBFReferenceMMD
+        | ClassConditionalLogKDEReference
+        | HybridQuantumKDEContrastiveReference,
+    ):
+        samples_per_class = (
+            config.contrastive_reference_samples_per_class
+            if config.variant.uses_contrastive_reference
+            else config.reference_samples_per_class
+        )
+        reference_count = _fit_reference_regularizer(
+            regularizer_model,
+            data_loader.dataset,
+            num_classes=config.num_classes,
+            samples_per_class=samples_per_class,
+        )
+        provenance["reference_selection"] = "first_balanced_training_examples"
+        provenance["reference_samples_per_class"] = reference_count
     provenance["regularizer_weight"] = config.regularizer_weight
     provenance["regularizer_gradient_ratio"] = config.regularizer_gradient_ratio
+    if config.variant.uses_contrastive_reference:
+        provenance["regularizer_weight_calibration"] = (
+            "fixed_from_initial_gradient_norms_on_development_seeds_42_43"
+        )
+        provenance["calibration_target_gradient_ratio"] = 0.1
     write_json(output_directory / "provenance.json", provenance)
     generator_optimizer = torch.optim.Adam(
         generator.parameters(),
@@ -101,38 +154,83 @@ def run_experiment(config: ExperimentConfig) -> dict[str, Any]:
             )
 
             generator_noise = torch.randn(batch_size, config.latent_dim, device=device)
-            generator_labels = torch.randint(
-                config.num_classes,
-                (batch_size,),
-                device=device,
-            )
+            # Reuse the real-batch labels for every variant. Besides giving the
+            # distribution losses equal real/generated class counts, this keeps
+            # the generator's labels and RNG stream exactly paired across an
+            # ablation matrix.
+            generator_labels = real_labels
             next_step = global_step + 1
             gradient_diagnostics = None
             if (
                 config.gradient_diagnostics_every_steps > 0
                 and next_step % config.gradient_diagnostics_every_steps == 0
             ):
-                gradient_diagnostics = measure_gradient_diagnostics(
+                if config.variant.uses_coherence_guidance:
+                    # The projected classical/quantum gradient interaction is
+                    # logged directly by coherence_guided_generator_step.
+                    pass
+                elif config.variant.uses_distribution_regularizer:
+                    assert regularizer_model is not None
+                    gradient_diagnostics = measure_distribution_gradient_diagnostics(
+                        generator,
+                        discriminator,
+                        regularizer_model,
+                        real_images,
+                        generator_noise,
+                        generator_labels,
+                        regularizer_weight=config.regularizer_weight,
+                        regularizer_gradient_ratio=config.regularizer_gradient_ratio,
+                    )
+                else:
+                    gradient_diagnostics = measure_gradient_diagnostics(
+                        generator,
+                        discriminator,
+                        regularizer_model,
+                        generator_noise,
+                        generator_labels,
+                        regularizer_weight=config.regularizer_weight,
+                        regularizer_temperature=config.regularizer_temperature,
+                        regularizer_gradient_ratio=config.regularizer_gradient_ratio,
+                    )
+            if config.variant.uses_coherence_guidance:
+                assert regularizer_model is not None
+                generator_metrics = coherence_guided_generator_step(
                     generator,
                     discriminator,
-                    energy_model,
+                    regularizer_model,
+                    generator_optimizer,
+                    real_images,
+                    generator_noise,
+                    generator_labels,
+                    regularizer_weight=config.regularizer_weight,
+                    regularizer_gradient_ratio=config.regularizer_gradient_ratio,
+                    coherence_gradient_ratio=config.coherence_gradient_ratio,
+                )
+            elif config.variant.uses_distribution_regularizer:
+                assert regularizer_model is not None
+                generator_metrics = distribution_regularized_generator_step(
+                    generator,
+                    discriminator,
+                    regularizer_model,
+                    generator_optimizer,
+                    real_images,
+                    generator_noise,
+                    generator_labels,
+                    regularizer_weight=config.regularizer_weight,
+                    regularizer_gradient_ratio=config.regularizer_gradient_ratio,
+                )
+            else:
+                generator_metrics = generator_step(
+                    generator,
+                    discriminator,
+                    regularizer_model,
+                    generator_optimizer,
                     generator_noise,
                     generator_labels,
                     regularizer_weight=config.regularizer_weight,
                     regularizer_temperature=config.regularizer_temperature,
                     regularizer_gradient_ratio=config.regularizer_gradient_ratio,
                 )
-            generator_metrics = generator_step(
-                generator,
-                discriminator,
-                energy_model,
-                generator_optimizer,
-                generator_noise,
-                generator_labels,
-                regularizer_weight=config.regularizer_weight,
-                regularizer_temperature=config.regularizer_temperature,
-                regularizer_gradient_ratio=config.regularizer_gradient_ratio,
-            )
 
             global_step += 1
             last_record = {
@@ -218,7 +316,7 @@ def _build_models(
 ) -> tuple[
     SharedQuantumGenerator,
     ACGANDiscriminator,
-    TorchStatevectorEnergy | DeviceBridgedEnergy | None,
+    torch.nn.Module | None,
 ]:
     circuit_spec = QuantumCircuitSpec(
         num_qubits=config.num_qubits,
@@ -237,9 +335,9 @@ def _build_models(
     generator.apply(initialize_weights)
     discriminator.apply(initialize_weights)
 
-    energy_model = None
+    regularizer_model = None
     if config.variant is ExperimentVariant.CLASSICAL_PROTOTYPE:
-        energy_model = ClassicalPrototypeEnergy(
+        regularizer_model = ClassicalPrototypeEnergy(
             num_classes=config.num_classes,
             num_angles=circuit_spec.num_parameters,
         ).to(device=device, dtype=torch.float32)
@@ -256,15 +354,162 @@ def _build_models(
         )
         base_backend = TorchStatevectorEnergy(circuit_spec, hamiltonian_spec)
         if quantum_device == device:
-            energy_model = base_backend.to(device=device, dtype=torch.float32)
+            regularizer_model = base_backend.to(device=device, dtype=torch.float32)
         else:
-            energy_model = DeviceBridgedEnergy(base_backend, quantum_device)
+            regularizer_model = DeviceBridgedEnergy(base_backend, quantum_device)
         if config.variant is ExperimentVariant.QUANTUM_PERMUTED:
-            energy_model = PermutedClassEnergy(
-                energy_model,
+            regularizer_model = PermutedClassEnergy(
+                regularizer_model,
                 num_classes=config.num_classes,
             )
-    return generator, discriminator, energy_model
+    elif config.variant in {
+        ExperimentVariant.QUANTUM_MODULAR_FREE_ENERGY,
+        ExperimentVariant.QUANTUM_MODULAR_DEPHASED,
+        ExperimentVariant.QUANTUM_MODULAR_PRODUCT,
+        ExperimentVariant.QUANTUM_MODULAR_ENERGY_ONLY,
+    }:
+        assert quantum_device is not None
+        ablations = {
+            ExperimentVariant.QUANTUM_MODULAR_FREE_ENERGY: ModularAblation.FULL,
+            ExperimentVariant.QUANTUM_MODULAR_DEPHASED: ModularAblation.DEPHASED,
+            ExperimentVariant.QUANTUM_MODULAR_PRODUCT: ModularAblation.PRODUCT,
+            ExperimentVariant.QUANTUM_MODULAR_ENERGY_ONLY: ModularAblation.ENERGY_ONLY,
+        }
+        regularizer_model = QuantumModularFreeEnergy(
+            circuit_spec,
+            execution_device=quantum_device,
+            angle_scale=config.modular_angle_scale,
+            depolarization=config.modular_depolarization,
+            ablation=ablations[config.variant],
+        )
+    elif config.variant is ExperimentVariant.QUANTUM_DENSITY_MMD:
+        assert quantum_device is not None
+        regularizer_model = QuantumDensityMMD(
+            circuit_spec,
+            execution_device=quantum_device,
+            angle_scale=config.density_mmd_angle_scale,
+        )
+    elif config.variant is ExperimentVariant.CLASSICAL_RBF_MMD:
+        execution_device = torch.device("cpu") if device.type == "mps" else device
+        regularizer_model = ClassConditionalRBFMMD(
+            execution_device=execution_device,
+            sigma_squared=config.rbf_sigma_squared,
+        )
+    elif config.variant is ExperimentVariant.QUANTUM_COHERENCE_GUIDANCE:
+        assert quantum_device is not None
+        regularizer_model = RBFQuantumCoherenceGuidance(
+            circuit_spec,
+            execution_device=quantum_device,
+            angle_scale=config.modular_angle_scale,
+            depolarization=config.modular_depolarization,
+            sigma_squared=config.rbf_sigma_squared,
+        )
+    elif config.variant is ExperimentVariant.QUANTUM_MODULAR_REFERENCE:
+        assert quantum_device is not None
+        regularizer_model = QuantumModularReference(
+            circuit_spec,
+            num_classes=config.num_classes,
+            execution_device=quantum_device,
+            angle_scale=config.modular_angle_scale,
+            depolarization=config.modular_depolarization,
+        )
+    elif config.variant is ExperimentVariant.CLASSICAL_RBF_REFERENCE:
+        execution_device = torch.device("cpu") if device.type == "mps" else device
+        regularizer_model = ClassConditionalRBFReferenceMMD(
+            num_classes=config.num_classes,
+            execution_device=execution_device,
+            sigma_squared=config.rbf_sigma_squared,
+        )
+    elif config.variant is ExperimentVariant.CLASSICAL_LOG_KDE_CONTRASTIVE:
+        execution_device = torch.device("cpu") if device.type == "mps" else device
+        regularizer_model = ClassConditionalLogKDEReference(
+            num_classes=config.num_classes,
+            execution_device=execution_device,
+            sigma_squared=config.kde_sigma_squared,
+            temperature=config.kde_temperature,
+        )
+    elif config.variant in {
+        ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE,
+        ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT,
+        ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED,
+    }:
+        assert quantum_device is not None
+        ablations = {
+            ExperimentVariant.HYBRID_MODULAR_KDE_CONTRASTIVE: ModularAblation.FULL,
+            ExperimentVariant.HYBRID_MODULAR_KDE_PRODUCT: ModularAblation.PRODUCT,
+            ExperimentVariant.HYBRID_MODULAR_KDE_DEPHASED: ModularAblation.DEPHASED,
+        }
+        regularizer_model = HybridQuantumKDEContrastiveReference(
+            circuit_spec,
+            num_classes=config.num_classes,
+            execution_device=quantum_device,
+            angle_scale=config.contrastive_angle_scale,
+            depolarization=config.modular_depolarization,
+            quantum_temperature=config.contrastive_quantum_temperature,
+            kde_sigma_squared=config.kde_sigma_squared,
+            kde_temperature=config.kde_temperature,
+            quantum_mixture_weight=config.quantum_mixture_weight,
+            ablation=ablations[config.variant],
+        )
+    return generator, discriminator, regularizer_model
+
+
+def _fit_reference_regularizer(
+    regularizer: (
+        QuantumModularReference
+        | ClassConditionalRBFReferenceMMD
+        | ClassConditionalLogKDEReference
+        | HybridQuantumKDEContrastiveReference
+    ),
+    dataset: Dataset,
+    *,
+    num_classes: int,
+    samples_per_class: int,
+) -> int:
+    images, labels, actual_count = _balanced_reference_batch(
+        dataset,
+        num_classes=num_classes,
+        samples_per_class=samples_per_class,
+    )
+    regularizer.fit_reference(images, labels)
+    return actual_count
+
+
+def _balanced_reference_batch(
+    dataset: Dataset,
+    *,
+    num_classes: int,
+    samples_per_class: int,
+) -> tuple[torch.Tensor, torch.Tensor, int]:
+    buckets: list[list[torch.Tensor]] = [[] for _ in range(num_classes)]
+    counts = torch.zeros(num_classes, dtype=torch.long)
+    reference_generator = torch.Generator().manual_seed(0)
+    loader = DataLoader(
+        dataset,
+        batch_size=512,
+        shuffle=False,
+        num_workers=0,
+        generator=reference_generator,
+    )
+    for images, labels in loader:
+        for class_index in range(num_classes):
+            remaining = samples_per_class - counts[class_index].item()
+            if remaining <= 0:
+                continue
+            selected = images[labels == class_index][:remaining]
+            if selected.numel() == 0:
+                continue
+            buckets[class_index].append(selected)
+            counts[class_index] += selected.shape[0]
+        if torch.all(counts >= samples_per_class):
+            break
+    actual_count = int(counts.min().item())
+    if actual_count <= 0:
+        raise RuntimeError("dataset does not contain every class required by the reference bank")
+    class_images = [torch.cat(bucket)[:actual_count] for bucket in buckets]
+    images = torch.cat(class_images)
+    labels = torch.arange(num_classes, dtype=torch.long).repeat_interleave(actual_count)
+    return images, labels, actual_count
 
 
 def _resolve_quantum_device(

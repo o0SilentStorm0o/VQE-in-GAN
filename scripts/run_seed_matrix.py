@@ -14,6 +14,13 @@ from vqe_gan.evaluation.run import evaluate_checkpoint
 from vqe_gan.reproducibility import write_json
 from vqe_gan.runner import run_experiment
 
+DEFAULT_VARIANTS = (
+    ExperimentVariant.NO_REGULARIZER,
+    ExperimentVariant.QUANTUM_CONTRASTIVE,
+    ExperimentVariant.CLASSICAL_PROTOTYPE,
+    ExperimentVariant.QUANTUM_PERMUTED,
+)
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -26,6 +33,13 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--evaluation-samples", type=int, default=5_000)
     parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default="cuda")
     parser.add_argument("--quantum-device", choices=("same", "cpu"), default="cpu")
+    parser.add_argument(
+        "--variants",
+        nargs="+",
+        choices=[variant.value for variant in ExperimentVariant],
+        default=[variant.value for variant in DEFAULT_VARIANTS],
+        help="Explicit variant subset; defaults to the original four-way ablation.",
+    )
     return parser.parse_args()
 
 
@@ -43,8 +57,9 @@ def main() -> None:
     training_seconds: dict[str, float] = {}
     evaluation_seconds: dict[str, float] = {}
     matrix_start = time.perf_counter()
+    variants = [ExperimentVariant(value) for value in arguments.variants]
 
-    for variant in ExperimentVariant:
+    for variant in variants:
         run_name = f"{variant.value}-seed-{arguments.seed}"
         config = ExperimentConfig(
             run_name=run_name,
@@ -56,9 +71,12 @@ def main() -> None:
             quantum_device=arguments.quantum_device,
             epochs=arguments.epochs,
             max_steps=arguments.max_steps,
-            regularizer_weight=0.0 if variant is ExperimentVariant.NO_REGULARIZER else 1.0,
+            regularizer_weight=variant.default_regularizer_weight,
             regularizer_gradient_ratio=(
-                None if variant is ExperimentVariant.NO_REGULARIZER else 0.1
+                None
+                if variant is ExperimentVariant.NO_REGULARIZER
+                or variant.uses_contrastive_reference
+                else 0.1
             ),
             download_dataset=False,
         )
@@ -69,7 +87,7 @@ def main() -> None:
         training_seconds[variant.value] = time.perf_counter() - start
         run_directories[variant] = config.output_directory
 
-    for variant in ExperimentVariant:
+    for variant in variants:
         run_directory = run_directories[variant]
         synchronize(arguments.device)
         start = time.perf_counter()
@@ -92,6 +110,7 @@ def main() -> None:
         "evaluation_samples": arguments.evaluation_samples,
         "device": arguments.device,
         "quantum_device": arguments.quantum_device,
+        "variants": [variant.value for variant in variants],
         "training_seconds": training_seconds,
         "evaluation_seconds": evaluation_seconds,
         "total_seconds": time.perf_counter() - matrix_start,

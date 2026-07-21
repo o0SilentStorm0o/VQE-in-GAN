@@ -39,8 +39,9 @@ tests must demonstrate that:
 **Current status:** the shared generator and isolated optimizer steps are implemented and covered
 by gradient, call-count, parameter, and BatchNorm-state tests. The architecture and computation
 boundaries are recorded in `shared_generator_design.md`. The zero-regularizer variant uses the same
-runner and model definitions and skips backend construction. A cross-variant data-order regression
-test remains pending before the ablation protocol is frozen.
+runner and model definitions and skips backend construction. All variants now reuse the labels of
+the real minibatch for the generator update, which gives distribution losses equal per-class
+real/generated counts and preserves an identical RNG stream across paired variants.
 
 ## Stage 3: smoke run and preregistered experiment
 
@@ -49,10 +50,28 @@ The full hypotheses, equivalence bounds, seed list, metrics, and exclusion crite
 before full-scale runs begin. Exploratory analyses must be labeled separately from confirmatory
 tests.
 
-**Current status:** CPU and MPS/CPU-bridge smoke runs complete successfully. Repeated MPS runs with
-the same seed produced byte-identical structured metrics. Configuration, source provenance,
-dependency-lock digest, device placement, metrics, and atomic checkpoints are recorded per run.
-A 500-step exploratory pilot rejected both a direct feature-map angle head and fixed regularizer
-weighting. The corrected image-conditioned pilot and a candidate confirmatory protocol are recorded
-in `pilot_500_steps.md` and `ablation_protocol_draft.md`. Training duration, exact statistical
-tests, and equivalence bounds are not yet frozen.
+**Current status:** CPU and MPS/CPU-bridge smoke runs complete successfully, but longer paired MPS
+replays with a CPU distribution regularizer are not deterministic. A perturbation near `1e-7` is
+amplified by adversarial training even under strict deterministic mode. Independent CPU replays
+have byte-identical logs and exactly identical checkpoint tensors. Configuration, source
+provenance, dependency-lock digest, device placement, backend eligibility, metrics, and atomic
+checkpoints are recorded per run. New distribution experiments must use CPU or a replay-verified
+deterministic CUDA environment.
+
+## Stage 4: quantum-utility gate
+
+Before any positive hypothesis is preregistered, a quantum candidate must beat a matched classical
+control with the same real-data access, pooled input, generator architecture, and shared-gradient
+budget. Dephased, product-circuit, entropy-free, and label-alignment removals are mechanism checks,
+not substitutes for the classical control.
+
+**Current status:** three original real-data-anchored candidates were explored. Class-conditional modular
+free energy was seed-dependent and weaker on average than RBF-MMD; an orthogonal coherence-residual
+augmentation harmed the RBF baseline; and a stable modular reference bank improved the primary
+class-FID screen on three seeds, including held-out seed 314, but failed sharply on held-out seed
+729. A fourth, separate candidate fixes the target-only objective with centered all-class modular
+logits and tests only a 5% quantum addition over a stronger log-KDE control. It passes product and
+dephased development checks on seed 42 and improves the classical control on development seeds 42
+and 43. Its untouched seeds, fixed parameters, and stop rule are preregistered in
+`contrastive_reference_protocol.md`. No positive claim is authorized until that falsification stage
+passes.

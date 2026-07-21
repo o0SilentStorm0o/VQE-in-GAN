@@ -10,7 +10,7 @@ from torch import Tensor
 
 from vqe_gan.models import ACGANDiscriminator, SharedQuantumGenerator
 from vqe_gan.quantum.losses import contrastive_energy_loss
-from vqe_gan.training.steps import AllClassEnergyModel
+from vqe_gan.training.steps import AllClassEnergyModel, ImageDistributionRegularizer
 
 
 @dataclass(frozen=True)
@@ -174,6 +174,123 @@ def measure_gradient_diagnostics(
         regularizer_accuracy=regularizer_accuracy,
         zero_noise_regularizer_accuracy=zero_noise_accuracy,
         angle_noise_sensitivity=angle_noise_sensitivity,
+    )
+
+
+def measure_distribution_gradient_diagnostics(
+    generator: SharedQuantumGenerator,
+    discriminator: ACGANDiscriminator,
+    regularizer_model: ImageDistributionRegularizer,
+    real_images: Tensor,
+    noise: Tensor,
+    class_labels: Tensor,
+    *,
+    regularizer_weight: float,
+    regularizer_gradient_ratio: float | None = None,
+) -> GradientDiagnostics:
+    """Measure a real-data distribution loss against both ACGAN generator objectives."""
+
+    if regularizer_weight <= 0:
+        raise ValueError("regularizer_weight must be positive")
+    if regularizer_gradient_ratio is not None and regularizer_gradient_ratio <= 0:
+        raise ValueError("regularizer_gradient_ratio must be positive when set")
+
+    generator_was_training = generator.training
+    discriminator_was_training = discriminator.training
+    discriminator_requires_grad = [
+        parameter.requires_grad for parameter in discriminator.parameters()
+    ]
+    generator.eval()
+    discriminator.eval()
+    for parameter in discriminator.parameters():
+        parameter.requires_grad_(False)
+
+    label_parameters = tuple(generator.label_embedding.parameters())
+    projection_parameters = tuple(generator.input_projection.parameters())
+    decoder_parameters = tuple(generator.image_decoder.parameters())
+    shared_parameters = (*label_parameters, *projection_parameters, *decoder_parameters)
+    try:
+        images = generator(noise, class_labels)
+        regularizer_loss = regularizer_model(images, real_images, class_labels)
+        adversarial_logits, class_logits = discriminator(images)
+        adversarial_loss = functional.binary_cross_entropy_with_logits(
+            adversarial_logits,
+            torch.ones_like(adversarial_logits),
+        )
+        auxiliary_loss = functional.cross_entropy(class_logits, class_labels)
+        adversarial_gradients = _gradients(
+            adversarial_loss,
+            shared_parameters,
+            retain_graph=True,
+        )
+        auxiliary_gradients = _gradients(
+            auxiliary_loss,
+            shared_parameters,
+            retain_graph=True,
+        )
+        regularizer_gradients = _gradients(
+            regularizer_loss,
+            shared_parameters,
+            retain_graph=False,
+        )
+    finally:
+        generator.train(generator_was_training)
+        discriminator.train(discriminator_was_training)
+        for parameter, requires_grad in zip(
+            discriminator.parameters(),
+            discriminator_requires_grad,
+            strict=True,
+        ):
+            parameter.requires_grad_(requires_grad)
+
+    gan_gradients = tuple(
+        adversarial + auxiliary
+        for adversarial, auxiliary in zip(
+            adversarial_gradients,
+            auxiliary_gradients,
+            strict=True,
+        )
+    )
+    gan_norm = _norm(gan_gradients)
+    unweighted_regularizer_norm = _norm(regularizer_gradients)
+    effective_regularizer_weight = regularizer_weight
+    if regularizer_gradient_ratio is not None:
+        if unweighted_regularizer_norm <= torch.finfo(noise.dtype).eps:
+            raise RuntimeError("regularizer gradient is too small for dynamic balancing")
+        effective_regularizer_weight = (
+            regularizer_gradient_ratio * gan_norm / unweighted_regularizer_norm
+        )
+    regularizer_gradients = tuple(
+        effective_regularizer_weight * gradient for gradient in regularizer_gradients
+    )
+    label_count = len(label_parameters)
+    projection_end = label_count + len(projection_parameters)
+    regularizer_norm = _norm(regularizer_gradients)
+    return GradientDiagnostics(
+        adversarial_norm=_norm(adversarial_gradients),
+        auxiliary_norm=_norm(auxiliary_gradients),
+        gan_objective_norm=gan_norm,
+        regularizer_norm=regularizer_norm,
+        regularizer_to_gan_norm_ratio=(regularizer_norm / gan_norm if gan_norm > 0 else 0.0),
+        effective_regularizer_weight=effective_regularizer_weight,
+        regularizer_label_embedding_norm=_norm(regularizer_gradients[:label_count]),
+        regularizer_input_projection_norm=_norm(
+            regularizer_gradients[label_count:projection_end]
+        ),
+        regularizer_image_decoder_norm=_norm(regularizer_gradients[projection_end:]),
+        adversarial_auxiliary_cosine=_cosine(adversarial_gradients, auxiliary_gradients),
+        regularizer_gan_objective_cosine=_cosine(regularizer_gradients, gan_gradients),
+        regularizer_adversarial_cosine=_cosine(
+            regularizer_gradients,
+            adversarial_gradients,
+        ),
+        regularizer_auxiliary_cosine=_cosine(
+            regularizer_gradients,
+            auxiliary_gradients,
+        ),
+        regularizer_accuracy=None,
+        zero_noise_regularizer_accuracy=None,
+        angle_noise_sensitivity=None,
     )
 
 

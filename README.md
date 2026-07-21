@@ -1,10 +1,11 @@
 # VQE-in-GAN: Exploratory Integration of VQE-Inspired Energy Terms in GANs
 
 > **Experiment redesign in progress:** The original notebooks and result artifacts are retained as
-> a historical record. A modular, parity-tested implementation is being developed under `src/`,
-> with the corrected protocol documented in `docs/experiment_v3_protocol.md`. New experimental
-> claims will only be based on this implementation after quantum energy and gradient parity tests
-> pass.
+> a historical record. The modular implementation under `src/` now passes backend, gradient, and
+> optimizer-isolation tests. The original mechanism remains a negative result. A new frozen
+> class-contrastive candidate has promising development evidence but has not passed held-out
+> falsification. The complete evidence and stopping rules are recorded in
+> [`docs/quantum_utility_audit.md`](docs/quantum_utility_audit.md).
 
 The historical and corrected Hamiltonian families, including the class-separation objective, are
 specified in [`docs/hamiltonian_design.md`](docs/hamiltonian_design.md).
@@ -13,6 +14,8 @@ The corrected shared generator and optimizer isolation are specified in
 The current exploratory pilot and draft ablation protocol are documented in
 [`docs/pilot_500_steps.md`](docs/pilot_500_steps.md) and
 [`docs/ablation_protocol_draft.md`](docs/ablation_protocol_draft.md).
+The separate frozen contrastive-reference experiment is specified in
+[`docs/contrastive_reference_protocol.md`](docs/contrastive_reference_protocol.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
@@ -147,8 +150,23 @@ uv run vqe-gan-train \
 ```
 
 On Apple Silicon, the default `auto` placement keeps the ACGAN on MPS and evaluates the small
-statevector on CPU. Full-step benchmark methodology and results are recorded in
+statevector on CPU. MPS is suitable for backend timing and ordinary smoke tests, but paired
+distribution-regularizer replays were not deterministic and are not admissible as experimental
+evidence. Full-step benchmark methodology and results are recorded in
 [`docs/training_step_benchmark.md`](docs/training_step_benchmark.md).
+
+The frozen CPU falsification pair can be run with:
+
+```bash
+uv run python scripts/run_seed_matrix.py \
+  --seed 101 \
+  --output-root runs/contrastive-heldout-seed-101 \
+  --dataset-root data \
+  --classifier mnist_classifier.pth \
+  --epochs 1 --max-steps 200 --evaluation-samples 5000 \
+  --device cpu --quantum-device cpu \
+  --variants classical_log_kde_contrastive hybrid_modular_kde_contrastive
+```
 
 The tested LUMI-G setup, measured MI250X timings, allocation accounting, and the frozen ten-seed
 job-array projection are recorded in [`docs/lumi_g_benchmark.md`](docs/lumi_g_benchmark.md). The

@@ -56,8 +56,13 @@ class TorchStatevectorEnergy(nn.Module):
         diagonals = self.energy_diagonals.to(device=angles.device, dtype=angles.dtype)
         return probabilities @ diagonals.transpose(0, 1)
 
-    def statevector(self, angles: Tensor) -> Tensor:
-        """Return batched final statevectors in Qiskit's little-endian basis order."""
+    def statevector(self, angles: Tensor, *, apply_entanglement: bool = True) -> Tensor:
+        """Return batched final statevectors in Qiskit's little-endian basis order.
+
+        ``apply_entanglement=False`` retains every rotation and parameter while removing only the
+        CNOT ring. It is used as a controlled product-state ablation of distributional losses; the
+        default remains parity-tested against Qiskit.
+        """
 
         if angles.ndim != 2 or angles.shape[1] != self.num_parameters:
             raise ValueError(
@@ -86,7 +91,7 @@ class TorchStatevectorEnergy(nn.Module):
                 state = self._apply_rz(state, angles[:, offset + qubit], qubit)
             offset += self.circuit_spec.num_qubits
 
-            if layer < self.circuit_spec.reps:
+            if apply_entanglement and layer < self.circuit_spec.reps:
                 for permutation in self.cnot_permutations:
                     state = state.index_select(1, permutation)
 

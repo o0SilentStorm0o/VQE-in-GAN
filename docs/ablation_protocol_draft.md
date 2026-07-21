@@ -6,6 +6,13 @@ This protocol is a draft informed by diagnostic pilots. It is not yet preregiste
 be used to label exploratory results as confirmatory. The training duration and final seed list
 remain open until a convergence pilot is completed.
 
+Subsequent real-data-anchored quantum candidates and matched classical controls are recorded in
+`quantum_utility_audit.md`. None of the original candidates passed the quantum-utility gate, so
+this draft must not be extended with a selected positive variant based on the inspected seeds. A
+new all-class contrastive study has its own frozen development/held-out boundary and stop rule in
+`contrastive_reference_protocol.md`; it does not retroactively change this original four-way
+negative/equivalence protocol.
+
 ## Experimental variants
 
 All variants instantiate the same generator, image-conditioned angle head, discriminator, data

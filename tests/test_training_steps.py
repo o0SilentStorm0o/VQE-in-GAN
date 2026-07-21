@@ -6,7 +6,12 @@ from torch import Tensor, nn
 from vqe_gan.models import ACGANDiscriminator, SharedQuantumGenerator
 from vqe_gan.quantum.spec import HamiltonianFamily, IsingHamiltonianSpec
 from vqe_gan.quantum.torch_backend import TorchStatevectorEnergy
-from vqe_gan.training import discriminator_step, generator_step
+from vqe_gan.training import (
+    coherence_guided_generator_step,
+    discriminator_step,
+    distribution_regularized_generator_step,
+    generator_step,
+)
 
 
 class CountingEnergyBackend(nn.Module):
@@ -130,3 +135,89 @@ def test_discriminator_step_does_not_populate_generator_gradients() -> None:
     for name, after in generator.state_dict().items():
         torch.testing.assert_close(state_before[name], after)
     assert generator.training
+
+
+class MeanMatchingRegularizer(nn.Module):
+    def forward(self, generated: Tensor, real: Tensor, class_labels: Tensor) -> Tensor:
+        del class_labels
+        return (generated.mean(dim=0) - real.mean(dim=0)).square().mean()
+
+
+class DecomposedMeanMatchingRegularizer(nn.Module):
+    def loss_components(
+        self,
+        generated: Tensor,
+        real: Tensor,
+        class_labels: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        del class_labels
+        classical = (generated.mean(dim=0) - real.mean(dim=0)).square().mean()
+        quantum = (
+            generated[:, :, ::2, ::2].mean(dim=0)
+            - real[:, :, ::2, ::2].mean(dim=0)
+        ).square().mean()
+        return classical, quantum
+
+
+def test_distribution_step_updates_only_the_generator_with_balanced_gradient() -> None:
+    generator, discriminator, noise, labels, real_images = _models_and_batch()
+    optimizer = torch.optim.Adam(generator.parameters(), lr=2e-4)
+    discriminator_state = {
+        name: value.detach().clone() for name, value in discriminator.state_dict().items()
+    }
+    generator_state = {
+        name: value.detach().clone() for name, value in generator.state_dict().items()
+    }
+
+    metrics = distribution_regularized_generator_step(
+        generator,
+        discriminator,
+        MeanMatchingRegularizer(),
+        optimizer,
+        real_images,
+        noise,
+        labels,
+        regularizer_weight=1.0,
+        regularizer_gradient_ratio=0.1,
+    )
+
+    assert metrics.regularizer_to_gan_gradient_ratio == 0.1
+    assert metrics.effective_regularizer_weight > 0
+    assert any(
+        not torch.equal(generator_state[name], value)
+        for name, value in generator.state_dict().items()
+    )
+    for name, value in discriminator.state_dict().items():
+        torch.testing.assert_close(value, discriminator_state[name])
+    assert all(parameter.grad is None for parameter in discriminator.parameters())
+
+
+def test_coherence_guidance_has_separate_bounded_gradient_budget() -> None:
+    generator, discriminator, noise, labels, real_images = _models_and_batch()
+    optimizer = torch.optim.Adam(generator.parameters(), lr=2e-4)
+    discriminator_state = {
+        name: value.detach().clone() for name, value in discriminator.state_dict().items()
+    }
+
+    metrics = coherence_guided_generator_step(
+        generator,
+        discriminator,
+        DecomposedMeanMatchingRegularizer(),
+        optimizer,
+        real_images,
+        noise,
+        labels,
+        regularizer_weight=1.0,
+        regularizer_gradient_ratio=0.1,
+        coherence_gradient_ratio=0.05,
+    )
+
+    assert metrics.classical_regularizer is not None
+    assert metrics.quantum_regularizer is not None
+    assert metrics.effective_quantum_weight is not None
+    assert metrics.quantum_to_gan_gradient_ratio == 0.05
+    assert metrics.regularizer_to_gan_gradient_ratio is not None
+    assert 0 <= metrics.retained_quantum_gradient_fraction <= 1.00001
+    for name, value in discriminator.state_dict().items():
+        torch.testing.assert_close(value, discriminator_state[name])
+    assert all(parameter.grad is None for parameter in discriminator.parameters())

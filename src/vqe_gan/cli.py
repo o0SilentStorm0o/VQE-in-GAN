@@ -35,6 +35,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--regularizer-weight", type=float)
     parser.add_argument("--regularizer-temperature", type=float, default=1.0)
     parser.add_argument("--regularizer-gradient-ratio", type=float)
+    parser.add_argument("--modular-angle-scale", type=float, default=0.125)
+    parser.add_argument("--modular-depolarization", type=float, default=0.01)
+    parser.add_argument("--density-mmd-angle-scale", type=float, default=0.25)
+    parser.add_argument("--rbf-sigma-squared", type=float, default=1.213)
+    parser.add_argument("--coherence-gradient-ratio", type=float, default=0.05)
+    parser.add_argument("--reference-samples-per-class", type=int, default=256)
+    parser.add_argument("--contrastive-reference-samples-per-class", type=int, default=1024)
+    parser.add_argument("--contrastive-angle-scale", type=float, default=0.75)
+    parser.add_argument("--contrastive-quantum-temperature", type=float, default=0.04)
+    parser.add_argument("--kde-sigma-squared", type=float, default=0.03125)
+    parser.add_argument("--kde-temperature", type=float, default=0.75)
+    parser.add_argument("--quantum-mixture-weight", type=float, default=0.05)
     parser.add_argument("--gradient-diagnostics-every-steps", type=int, default=0)
     parser.add_argument("--checkpoint-every-steps", type=int, default=0)
     parser.add_argument("--no-download", action="store_true")
@@ -45,7 +57,7 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
     variant = ExperimentVariant(arguments.variant)
     regularizer_weight = arguments.regularizer_weight
     if regularizer_weight is None:
-        regularizer_weight = 0.0 if variant is ExperimentVariant.NO_REGULARIZER else 1.0
+        regularizer_weight = variant.default_regularizer_weight
     return ExperimentConfig(
         run_name=arguments.run_name,
         output_root=arguments.output_root,
@@ -62,6 +74,20 @@ def config_from_arguments(arguments: argparse.Namespace) -> ExperimentConfig:
         regularizer_weight=regularizer_weight,
         regularizer_temperature=arguments.regularizer_temperature,
         regularizer_gradient_ratio=arguments.regularizer_gradient_ratio,
+        modular_angle_scale=arguments.modular_angle_scale,
+        modular_depolarization=arguments.modular_depolarization,
+        density_mmd_angle_scale=arguments.density_mmd_angle_scale,
+        rbf_sigma_squared=arguments.rbf_sigma_squared,
+        coherence_gradient_ratio=arguments.coherence_gradient_ratio,
+        reference_samples_per_class=arguments.reference_samples_per_class,
+        contrastive_reference_samples_per_class=(
+            arguments.contrastive_reference_samples_per_class
+        ),
+        contrastive_angle_scale=arguments.contrastive_angle_scale,
+        contrastive_quantum_temperature=arguments.contrastive_quantum_temperature,
+        kde_sigma_squared=arguments.kde_sigma_squared,
+        kde_temperature=arguments.kde_temperature,
+        quantum_mixture_weight=arguments.quantum_mixture_weight,
         gradient_diagnostics_every_steps=arguments.gradient_diagnostics_every_steps,
         checkpoint_every_steps=arguments.checkpoint_every_steps,
         download_dataset=not arguments.no_download,
