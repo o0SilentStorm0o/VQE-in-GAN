@@ -86,6 +86,15 @@ while `alpha_t^k` matches the actual Adam-preconditioned auxiliary displacement.
 rotates the circuit direction it controls. Adam's moments still receive the exact raw-matched total
 gradient. The full branch uses its ordinary Adam update with multiplier 1.0 and is unchanged.
 
+A first production attempt stopped before evaluation at product step 144 because applying a large
+late-stage multiplier once in float32 missed the shared Adam tolerance. No outcome was generated or
+read. The applied scalar is therefore solved deterministically against the realized float32
+parameter displacement: after each write, multiply it by `target / achieved`, for at most eight
+iterations, stopping when relative error is at most `1e-5`. The frozen acceptance limit remains
+`1e-4`; failure to meet it still invalidates the run. This numerical refinement changes neither
+the target nor the update direction, performs no clipping, and is also used for the Phase B angle
+displacement. Full reference updates require no refinement and remain ordinary Adam updates.
+
 ## Phase A: fixed image-to-circuit map
 
 The entire angle head is zero-output initialized and frozen. Therefore the circuit angles are the
