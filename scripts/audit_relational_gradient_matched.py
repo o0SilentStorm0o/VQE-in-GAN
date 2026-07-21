@@ -129,6 +129,7 @@ def main() -> None:
     checks_by_control = {
         control.value: _margin_checks(mean_metrics, control) for control in _CONTROLS
     }
+    common_geometry = _common_geometry_summary(runs)
     same_weight_path = Path(arguments.same_weight_results)
     same_weight = json.loads(same_weight_path.read_text(encoding="utf-8"))
     result = {
@@ -147,6 +148,7 @@ def main() -> None:
                 calibration,
                 expected_weights,
             ),
+            "initial_common_geometry": calibration["structural_checks"],
         },
         "runs": runs,
         "mean_metrics": mean_metrics,
@@ -158,6 +160,7 @@ def main() -> None:
         "seed_consistency": {
             control.value: _seed_consistency(paired_deltas[control.value]) for control in _CONTROLS
         },
+        "common_full_checkpoint_geometry": common_geometry,
         "same_coefficient_comparison": {
             "path": str(same_weight_path),
             "sha256": file_sha256(same_weight_path),
@@ -184,6 +187,15 @@ def main() -> None:
                 checks_by_control[_DEPHASED.value].values()
             ),
             "entanglement_contribution_isolated": all(checks_by_control[_PRODUCT.value].values()),
+            "control_shared_gradient_direction_close_to_full": all(
+                summary["minimum_shared_gradient_cosine"] > 0.9
+                for summary in common_geometry.values()
+            ),
+            "initial_gradient_match_persisted_at_full_checkpoint": all(
+                0.5 <= summary["minimum_weighted_shared_norm_control_over_full"]
+                and summary["maximum_weighted_shared_norm_control_over_full"] <= 2.0
+                for summary in common_geometry.values()
+            ),
             "confirmatory_claim_permitted": False,
         },
         "audit_provenance": collect_provenance(repository_root),
@@ -311,6 +323,16 @@ def _audit_checkpoint(checkpoint_path: Path) -> dict[str, Any]:
         value.detach() - initial_angle_state[name]
         for name, value in generator.angle_head.state_dict().items()
     ]
+    angle_parameter_changes = {
+        name: {
+            "changed_values": torch.count_nonzero(
+                value.detach() - initial_angle_state[name]
+            ).item(),
+            "change_norm": (value.detach() - initial_angle_state[name]).norm().item(),
+            "max_abs_change": (value.detach() - initial_angle_state[name]).abs().max().item(),
+        }
+        for name, value in generator.angle_head.state_dict().items()
+    }
     return {
         "diagnostic_noise_seed": _DIAGNOSTIC_NOISE_BASE_SEED + config.seed,
         "angle_head_changed_values": sum(
@@ -321,6 +343,10 @@ def _audit_checkpoint(checkpoint_path: Path) -> dict[str, Any]:
         .item(),
         "angle_head_max_abs_change": max(
             difference.abs().max().item() for difference in angle_differences
+        ),
+        "angle_parameter_changes": angle_parameter_changes,
+        "applied_angle_correction_rms": (
+            config.angle_residual_fraction * diagnostics.angle_residual_rms
         ),
         "gradient_diagnostics": asdict(diagnostics),
     }
@@ -526,6 +552,34 @@ def _seed_consistency(deltas: list[dict[str, Any]]) -> dict[str, bool]:
             item["conditional_accuracy"] >= 0 for item in seeds
         ),
     }
+
+
+def _common_geometry_summary(runs: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
+    result = {}
+    for control in _CONTROLS:
+        records = [
+            run["variants"][_FULL.value]["common_checkpoint_kernel_geometry"]["full_vs_controls"][
+                control.value
+            ]
+            for run in runs
+        ]
+        shared_cosines = [float(record["shared_gradient_cosine"]) for record in records]
+        angle_cosines = [float(record["angle_gradient_cosine"]) for record in records]
+        norm_ratios = [
+            float(record["weighted_shared_norm_control_over_full"]) for record in records
+        ]
+        result[control.value] = {
+            "mean_shared_gradient_cosine": statistics.mean(shared_cosines),
+            "minimum_shared_gradient_cosine": min(shared_cosines),
+            "maximum_shared_gradient_cosine": max(shared_cosines),
+            "mean_angle_gradient_cosine": statistics.mean(angle_cosines),
+            "minimum_angle_gradient_cosine": min(angle_cosines),
+            "maximum_angle_gradient_cosine": max(angle_cosines),
+            "mean_weighted_shared_norm_control_over_full": statistics.mean(norm_ratios),
+            "minimum_weighted_shared_norm_control_over_full": min(norm_ratios),
+            "maximum_weighted_shared_norm_control_over_full": max(norm_ratios),
+        }
+    return result
 
 
 def _calibration_ratio_summaries(
