@@ -29,9 +29,21 @@ The calibration exactly reuses the original development procedure:
 - one fixed median weight per kernel across all eight batches;
 - no GAN outcome is used to select a weight.
 
-The full-kernel calibration must reproduce its committed weight
-`0.0005662128371831583`. Product and dephased weights remain unset until the deterministic
-calibration file is committed. The exact KDE weight remains `2e-5`.
+The deterministic calibration reproduced the committed full-kernel weight exactly. The frozen
+weights for this diagnostic are:
+
+- full: `0.0005662128371831583`;
+- product: `0.00007045240128892456`;
+- dephased: `0.00003077098628673762`.
+
+The exact KDE weight remains `2e-5`. The complete per-batch calibration is stored in
+`docs/relational_gradient_matched_calibration.json` (SHA-256
+`e7f132c369677842af35fc5de786a6f7a714ecfc5ced93942b5330c14ec2ed95`). With the single median
+weight applied to all eight batches, the median weighted coverage/GAN shared-gradient ratios are
+`0.01037`, `0.01000`, and `0.01046` for full, product, and dephased respectively. Their batchwise
+ranges remain unequal (`0.00205`–`0.01499`, `0.00781`–`0.02085`, and
+`0.00083`–`0.01424`), so the diagnostic matches the prespecified central budget rather than every
+individual batch.
 
 The angle head is reported separately. Because it receives no GAN or KDE gradient, Adam partly
 normalizes away a scalar loss coefficient on its first update. Matching the shared-path gradient
