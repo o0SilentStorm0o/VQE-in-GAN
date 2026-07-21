@@ -155,6 +155,7 @@ def diagnose_contrastive_failure(
         )
 
     return {
+        "schema_version": 1,
         "analysis": "post_hoc_contrastive_failure_diagnostic",
         "interpretation": "mechanistic_only_not_confirmatory",
         "device": str(device),
@@ -235,7 +236,7 @@ def classwise_feature_diagnostics(
             predictions[generated_mask],
             minlength=classifier_logits.shape[1],
         )
-        prediction_counts[class_index] = 0
+        prediction_counts[class_index] = -1
         top_wrong_class = int(prediction_counts.argmax().item())
         top_wrong_fraction = (
             prediction_counts[top_wrong_class].float() / generated_mask.sum()
@@ -419,6 +420,16 @@ def _diagnose_pair(
         classical_logits,
         hybrid_logits,
     )
+    evaluation_verification = {
+        "classical": _verify_stored_evaluation(
+            pair["classical_path"].with_name("evaluation.json"),
+            classical_classwise,
+        ),
+        "hybrid": _verify_stored_evaluation(
+            pair["hybrid_path"].with_name("evaluation.json"),
+            hybrid_classwise,
+        ),
+    }
 
     teacher_scores = {
         "classical_generator": _teacher_score_report(
@@ -509,6 +520,7 @@ def _diagnose_pair(
         },
         "architecture": architecture,
         "outcome": outcome,
+        "evaluation_verification": evaluation_verification,
         "teacher_scores": teacher_scores,
         "gradients": {
             "actual_first_generator_batch": initial["gradient_report"],
@@ -599,6 +611,35 @@ def _paired_outcome_report(
         "independent_classifier_prediction_disagreement": (
             hybrid_logits.argmax(dim=1) != classical_logits.argmax(dim=1)
         ).float().mean().item(),
+    }
+
+
+def _verify_stored_evaluation(
+    evaluation_path: Path,
+    classwise_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not evaluation_path.is_file():
+        return {"available": False}
+    stored = json.loads(evaluation_path.read_text(encoding="utf-8"))["metrics"]
+    recomputed = {
+        "conditional_accuracy": _mean(
+            row["conditional_accuracy"] for row in classwise_rows
+        ),
+        "class_conditional_feature_fid_64": _mean(
+            row["class_fid"] for row in classwise_rows
+        ),
+        "generated_intra_class_diversity": _mean(
+            row["intra_class_diversity"] for row in classwise_rows
+        ),
+    }
+    differences = {name: recomputed[name] - stored[name] for name in recomputed}
+    return {
+        "available": True,
+        "path": str(evaluation_path.resolve()),
+        "stored": {name: stored[name] for name in recomputed},
+        "recomputed": recomputed,
+        "differences": differences,
+        "maximum_absolute_difference": max(abs(value) for value in differences.values()),
     }
 
 
