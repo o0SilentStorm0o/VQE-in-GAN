@@ -1146,7 +1146,7 @@ def _repair_quantized_displacement_norm(
     target: Tensor,
     *,
     tolerance: float = 1e-4,
-    max_corrections: int = 64,
+    max_corrections: int = 128,
     max_relative_perturbation: float = 0.02,
 ) -> tuple[Tensor, float, int, float]:
     """Close a float32 norm gap with bounded adjacent-coordinate moves."""

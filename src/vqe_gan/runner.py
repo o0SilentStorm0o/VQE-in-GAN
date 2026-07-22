@@ -705,7 +705,7 @@ def _validate_reference_budget_metrics(
     adam_quantization_relative_norm = metrics.coverage_shared_adam_quantization_relative_norm
     if (
         adam_quantization_corrections is None
-        or not 0 <= adam_quantization_corrections <= 64
+        or not 0 <= adam_quantization_corrections <= 128
         or adam_quantization_relative_norm is None
         or not math.isfinite(adam_quantization_relative_norm)
         or not 0 <= adam_quantization_relative_norm <= 0.02
@@ -737,7 +737,7 @@ def _validate_reference_budget_metrics(
         angle_quantization_relative_norm = metrics.coverage_angle_update_quantization_relative_norm
         if (
             angle_quantization_corrections is None
-            or not 0 <= angle_quantization_corrections <= 64
+            or not 0 <= angle_quantization_corrections <= 128
             or angle_quantization_relative_norm is None
             or not math.isfinite(angle_quantization_relative_norm)
             or not 0 <= angle_quantization_relative_norm <= 0.02

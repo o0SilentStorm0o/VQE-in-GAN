@@ -254,9 +254,9 @@ def _read_run(
             iterations > 1 for iterations in adam_correction_iterations
         ),
         "adam_quantization_corrections_maximum": max(adam_quantization_corrections),
-        "adam_quantization_corrections_within_64": (
+        "adam_quantization_corrections_within_128": (
             min(adam_quantization_corrections) >= 0
-            and max(adam_quantization_corrections) <= 64
+            and max(adam_quantization_corrections) <= 128
         ),
         "full_adam_quantization_repair_unused": (
             max(adam_quantization_corrections) == 0 if variant is FULL else True
@@ -280,9 +280,9 @@ def _read_run(
         "angle_quantization_corrections_maximum": (
             max(angle_quantization_corrections) if angle_quantization_corrections else None
         ),
-        "angle_quantization_corrections_within_64": (
+        "angle_quantization_corrections_within_128": (
             min(angle_quantization_corrections) >= 0
-            and max(angle_quantization_corrections) <= 64
+            and max(angle_quantization_corrections) <= 128
             if phase == "b"
             else not angle_quantization_corrections
         ),
@@ -317,12 +317,12 @@ def _read_run(
             technical["shared_ratio_within_1e_5"],
             technical["shared_adam_ratio_within_1e_4"],
             technical["adam_proposal_within_1e_5"],
-            technical["adam_quantization_corrections_within_64"],
+            technical["adam_quantization_corrections_within_128"],
             technical["full_adam_quantization_repair_unused"],
             technical["adam_quantization_repair_within_2e_2"],
             technical["angle_gradient_within_1e_5"],
             technical["angle_update_within_1e_4"],
-            technical["angle_quantization_corrections_within_64"],
+            technical["angle_quantization_corrections_within_128"],
             technical["full_angle_quantization_repair_unused"],
             technical["angle_quantization_repair_within_2e_2"],
         )
