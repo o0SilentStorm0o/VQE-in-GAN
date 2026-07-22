@@ -118,12 +118,20 @@ the frozen `1e-4` acceptance limit. No evaluation was run or inspected. If and o
 scalar level misses that limit, the control now starts from that best level and deterministically
 moves the parameter coordinate whose adjacent representable float32 value most closely closes the
 remaining squared-norm gap. It stops as soon as the existing `1e-4` limit is met, accepts at most
-64 such coordinate moves, and records both their count and the norm of the resulting perturbation
+128 such coordinate moves, and records both their count and the norm of the resulting perturbation
 relative to the realized auxiliary displacement. A relative perturbation above `0.02` invalidates
 the run. A provisional full-trajectory replay required this repair on eight of 200 product steps,
 with at most 38 moves to reach the acceptance limit. The same rule covers the Phase B angle
 displacement. This deterministic last-mile quantization repair changes neither the target nor its
 tolerance; the full branch remains an untouched ordinary Adam update.
+
+The first clean Phase A execution stopped before evaluation at dephased seed-43 step 158 because
+the initial 64-move computational guard was too small. An isolated 200-step replay reached the
+unchanged `1e-4` tolerance there after 90 moves with relative perturbation `0.01023`; across that
+trajectory the largest relative perturbation was `0.01701`, still below the frozen `0.02` safety
+bound. The move guard was therefore raised to 128 before any outcome was produced or read. The
+target, acceptance tolerance, perturbation bound, selection rule, and ordinary full update remain
+unchanged.
 
 ## Phase A: fixed image-to-circuit map
 
