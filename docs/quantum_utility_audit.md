@@ -2,8 +2,9 @@
 
 ## Status and question
 
-This document records exploratory mechanism tests performed before any confirmatory experiment.
-None of the numbers below are preregistered results. The purpose is to answer a narrower question:
+This document records exploratory mechanism tests followed by frozen falsification diagnostics.
+The early searches are not preregistered; Candidates 4 and 5 use outcome-independent stopping
+rules frozen before their respective evaluations. The purpose is to answer a narrower question:
 
 > Does a four-qubit auxiliary circuit provide a reproducible benefit to the corrected ACGAN that
 > cannot be explained by real-data access, gradient scaling, or a matched classical feature map?
@@ -11,9 +12,11 @@ None of the numbers below are preregistered results. The purpose is to answer a 
 The current answer is **no robust quantum-specific benefit in the tested architecture**. Several
 quantum losses improve individual ACGAN trajectories, but the improvement is seed-dependent and
 equal or stronger classical controls explain it. The strongest class-contrastive candidate also
-failed its frozen held-out class-FID gate. This does not prove that every possible quantum-assisted
-GAN must fail. It does reject the mechanisms tested here and prevents them from being promoted to
-a confirmatory claim.
+failed its frozen held-out class-FID gate. A later full-trajectory relational diagnostic matched
+both raw-gradient and Adam-step budgets: its trainable angle head helped the full candidate, but
+neither phase passed both circuit controls. This does not prove that every possible
+quantum-assisted GAN must fail. It does reject the mechanisms tested here and prevents them from
+being promoted to a confirmatory claim.
 
 ## Evidence required for a quantum-specific claim
 
@@ -331,9 +334,30 @@ Pauli string, to approach 67% classification on the inspected subset. Training w
 cost by repeated gradient evaluations. The candidate is therefore a simulator-based inductive-bias
 study, not a near-term hardware or VQE speedup claim.
 
+## Candidate 5: full-trajectory relational reference budget
+
+The trainable relational-coverage follow-up removed the main optimizer confound left by the earlier
+ablation. For every generator step, product and dephased controls replayed the full branch's raw
+shared-gradient ratio and actual Adam auxiliary-displacement ratio. Phase B also matched the raw
+gradient and actual displacement of the trainable angle head. Both 200-step CPU phases passed all
+technical checks on seeds 42 and 43.
+
+With the angle head frozen in Phase A, full beat product on class-FID on both seeds, but dephased
+beat full on both seeds and on all three mean gate metrics. With the angle head trainable in Phase
+B, full improved mean class-FID from 0.42688 to 0.40225, accuracy from 0.64490 to 0.67360, and
+diversity from 0.55775 to 0.57454. The incremental angle-head gate therefore passed.
+
+The circuit gate still failed. Against product, Phase B full had better mean class-FID, accuracy,
+and nearly identical diversity, but product had better class-FID on seed 42. Against dephased,
+full improved class-FID on both seeds and improved diversity, but its mean accuracy was 0.04470
+lower. The result is a circuit-dependent trade-off rather than a robust coherent-entangled
+advantage. No held-out seed is authorized or was run. Exact seed metrics, technical maxima, hashes,
+and the stop decision are in
+[reference_budget_relational_results.md](reference_budget_relational_results.md).
+
 ## Current conclusion
 
-The experiments support four statements:
+The experiments support five statements:
 
 1. A real-data-anchored quantum loss can regularize this ACGAN and can improve individual
    trajectories, including a held-out screening seed.
@@ -342,13 +366,16 @@ The experiments support four statements:
 3. The centered class-contrastive candidate fails the frozen held-out class-FID gate, contains no
    trainable circuit parameters, and confounds its nominal quantum addition with a change in the
    classical KDE logit scale. Its paired effect cannot be attributed to the quantum score.
-4. With four noiselessly simulated qubits, every tested quantum layer is a small differentiable
+4. The trainable relational angle head improves the full candidate under a matched trajectory
+   budget, but the full circuit does not robustly beat both product and dephased controls. This is
+   evidence for a useful trainable inductive bias, not for a coherence-specific advantage.
+5. With four noiselessly simulated qubits, every tested quantum layer is a small differentiable
    classical computation. These experiments can study inductive bias, but they cannot establish a
    computational quantum advantage.
 
 The honest result for the present architecture is therefore **no robust demonstrated
-quantum-specific benefit**. Candidate 4 is rejected under its frozen rule; further tuning on its
-inspected seeds is prohibited.
+quantum-specific benefit**. Candidates 4 and 5 are rejected under their frozen rules; further
+tuning on their inspected seeds is prohibited.
 
 ## Defensible next decision
 
@@ -357,9 +384,9 @@ There are now three coherent research directions:
 - Treat the corrected work as a rigorous negative benchmark. Freeze the original four-way
   ablation, run enough paired seeds to quantify equivalence, and make the causal-audit methodology
   the contribution.
-- Treat Candidate 4 as a completed falsification result. Its accuracy/class-FID trade-off can be
-  analyzed descriptively, but it cannot be rescued by retuning on seeds 101 or 202. A materially
-  new mechanism would require a new development split and a new untouched test set.
+- Treat Candidates 4 and 5 as completed falsification results. Their accuracy/class-FID trade-offs
+  can be analyzed descriptively, but they cannot be rescued by retuning on inspected seeds. A
+  materially new mechanism would require a new development split and a new untouched test set.
 - Start a genuinely new study in which the quantum resource is operational rather than a
   four-qubit simulator feature map: a circuit family and qubit count that are not cheaply emulated,
   an explicit hardware/noise model, and a compute- or sample-efficiency claim against strong

@@ -7,9 +7,10 @@
 > its classical control, but worsened mean class-FID and therefore failed its held-out stop rule.
 > A later trainable relational-coverage candidate improved development-set distribution metrics,
 > but failed its circuit-specific controls: its apparent advantage traded away class accuracy and
-> an initialization-only gradient match did not persist during training. No held-out seeds were
-> used for either failed candidate. A final full-trajectory reference-budget diagnostic is now
-> frozen to remove both raw-gradient and Adam-step confounds before reconsidering that mechanism.
+> an initialization-only gradient match did not persist during training. A final full-trajectory
+> reference-budget diagnostic removed both raw-gradient and Adam-step confounds. Its trainable
+> angle head improved the full candidate, but neither frozen phase passed both circuit controls,
+> so no held-out seed was authorized or run.
 > The complete evidence and stopping rules are recorded in
 > [`docs/quantum_utility_audit.md`](docs/quantum_utility_audit.md).
 
@@ -28,8 +29,10 @@ The trainable relational mechanism, circuit controls, and gradient-matched diagn
 in [`docs/trainable_relational_coverage_protocol.md`](docs/trainable_relational_coverage_protocol.md)
 and
 [`docs/relational_gradient_matched_diagnostic_protocol.md`](docs/relational_gradient_matched_diagnostic_protocol.md).
-The two-stage full-trajectory follow-up is frozen in
-[`docs/reference_budget_relational_protocol.md`](docs/reference_budget_relational_protocol.md).
+The two-stage full-trajectory follow-up is specified in
+[`docs/reference_budget_relational_protocol.md`](docs/reference_budget_relational_protocol.md),
+with completed results in
+[`docs/reference_budget_relational_results.md`](docs/reference_budget_relational_results.md).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
