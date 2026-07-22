@@ -111,6 +111,20 @@ the best realized point, and bisects with at most 33 parameter writes. It is use
 first analytical scale misses `1e-5`; the frozen `1e-4` acceptance limit and all outcome rules are
 unchanged.
 
+A complete 200-step technical replay then exposed a distinct quantization case: at product seed-42
+step 114, the target lay between two adjacent scalar float32 displacement levels. Their relative
+errors were `1.045e-4` below and `4.087e-4` above the target, so no scalar multiplier could satisfy
+the frozen `1e-4` acceptance limit. No evaluation was run or inspected. If and only if the best
+scalar level misses that limit, the control now starts from that best level and deterministically
+moves the parameter coordinate whose adjacent representable float32 value most closely closes the
+remaining squared-norm gap. It stops as soon as the existing `1e-4` limit is met, accepts at most
+64 such coordinate moves, and records both their count and the norm of the resulting perturbation
+relative to the realized auxiliary displacement. A relative perturbation above `0.02` invalidates
+the run. A provisional full-trajectory replay required this repair on eight of 200 product steps,
+with at most 38 moves to reach the acceptance limit. The same rule covers the Phase B angle
+displacement. This deterministic last-mile quantization repair changes neither the target nor its
+tolerance; the full branch remains an untouched ordinary Adam update.
+
 ## Phase A: fixed image-to-circuit map
 
 The entire angle head is zero-output initialized and frozen. Therefore the circuit angles are the
