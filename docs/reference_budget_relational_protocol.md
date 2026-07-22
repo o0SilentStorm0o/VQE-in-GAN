@@ -102,6 +102,15 @@ formula, but its separate float32 multiply/divide operations did not reproduce P
 same operations on cloned tensors before measuring displacement. The optimizer, frozen tolerance,
 budget target, and ordinary full update are unchanged.
 
+Using the exact Adam arithmetic exposed a staircase in the realized float32 control displacement:
+the multiplicative refinement then oscillated and a subsequent production attempt stopped before
+evaluation at product seed-42 step 11. A bracketed bisection on that exact failed step reached
+relative error `3.21e-6`, proving that the target was representable and the former solver—not the
+budget definition—was at fault. Refinement now brackets values below and above the target, retains
+the best realized point, and bisects with at most 33 parameter writes. It is used only when the
+first analytical scale misses `1e-5`; the frozen `1e-4` acceptance limit and all outcome rules are
+unchanged.
+
 ## Phase A: fixed image-to-circuit map
 
 The entire angle head is zero-output initialized and frozen. Therefore the circuit angles are the
