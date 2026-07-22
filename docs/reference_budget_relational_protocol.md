@@ -118,7 +118,7 @@ the frozen `1e-4` acceptance limit. No evaluation was run or inspected. If and o
 scalar level misses that limit, the control now starts from that best level and deterministically
 moves the parameter coordinate whose adjacent representable float32 value most closely closes the
 remaining squared-norm gap. It stops as soon as the existing `1e-4` limit is met, accepts at most
-128 such coordinate moves, and records both their count and the norm of the resulting perturbation
+512 such coordinate moves, and records both their count and the norm of the resulting perturbation
 relative to the realized auxiliary displacement. A relative perturbation above `0.02` invalidates
 the run. A provisional full-trajectory replay required this repair on eight of 200 product steps,
 with at most 38 moves to reach the acceptance limit. The same rule covers the Phase B angle
@@ -132,6 +132,16 @@ trajectory the largest relative perturbation was `0.01701`, still below the froz
 bound. The move guard was therefore raised to 128 before any outcome was produced or read. The
 target, acceptance tolerance, perturbation bound, selection rule, and ordinary full update remain
 unchanged.
+
+The first Phase B execution stopped before Phase B evaluation at dephased seed-42 step 38. The
+shared repair needed more than 128 moves, and the norm-space stopping calculation rounded just
+below `1e-4` while the audit-space auxiliary ratio rounded just above it. A complete isolated
+trajectory with a diagnostic safety margin needed at most 231 moves, with maximum relative
+perturbation `0.01203`; the separately budgeted angle displacement needed no quantization repair.
+The stopping error is now computed directly from the same auxiliary ratio used by the runner and
+audit, and the computational move guard is 512. The `1e-4` acceptance tolerance and `0.02`
+perturbation bound are unchanged. The Phase A audit had already completed, but no Phase B outcome
+had been produced or read, and this amendment does not alter any full reference update.
 
 ## Phase A: fixed image-to-circuit map
 
