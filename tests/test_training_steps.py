@@ -333,6 +333,7 @@ def test_relational_reference_budget_matches_shared_and_angle_optimizer_paths() 
         record_budget=True,
         match_angle_head_budget=True,
     )
+    assert reference.coverage_shared_adam_proposal_relative_error == 0.0
     target = CoverageBudgetTarget(
         step=1,
         shared_ratio=reference.coverage_shared_target_ratio,

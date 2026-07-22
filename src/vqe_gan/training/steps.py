@@ -1031,14 +1031,17 @@ def _adam_proposed_updates(
             prior_mean = torch.zeros_like(parameter)
         if prior_squared_mean is None:
             prior_squared_mean = torch.zeros_like(parameter)
-        mean = beta1 * prior_mean + (1 - beta1) * gradient
-        squared_mean = beta2 * prior_squared_mean + (1 - beta2) * gradient.square()
+        mean = prior_mean.clone()
+        mean.lerp_(gradient, 1 - beta1)
+        squared_mean = prior_squared_mean.clone()
+        squared_mean.mul_(beta2).addcmul_(gradient, gradient, value=1 - beta2)
         bias_correction1 = 1 - beta1**step
         bias_correction2 = 1 - beta2**step
-        denominator = squared_mean.sqrt() / (bias_correction2**0.5)
-        denominator = denominator + group["eps"]
-        update = -(group["lr"] / bias_correction1) * mean / denominator
-        updates.append(update)
+        step_size = group["lr"] / bias_correction1
+        denominator = (squared_mean.sqrt() / (bias_correction2**0.5)).add_(group["eps"])
+        proposed_parameter = parameter.detach().clone()
+        proposed_parameter.addcdiv_(mean, denominator, value=-step_size)
+        updates.append(proposed_parameter - parameter.detach())
     return tuple(updates)
 
 
