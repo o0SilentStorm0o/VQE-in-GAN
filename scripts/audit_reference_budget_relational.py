@@ -189,6 +189,14 @@ def _read_run(
     adam_correction_iterations = [
         int(record["generator"]["coverage_shared_adam_correction_iterations"]) for record in records
     ]
+    adam_quantization_corrections = [
+        int(record["generator"]["coverage_shared_adam_quantization_corrections"])
+        for record in records
+    ]
+    adam_quantization_relative_norms = [
+        float(record["generator"]["coverage_shared_adam_quantization_relative_norm"])
+        for record in records
+    ]
     angle_gradient_errors = [
         float(record["generator"]["coverage_angle_gradient_relative_error"])
         for record in records
@@ -203,6 +211,16 @@ def _read_run(
         int(record["generator"]["coverage_angle_update_correction_iterations"])
         for record in records
         if record["generator"]["coverage_angle_update_correction_iterations"] is not None
+    ]
+    angle_quantization_corrections = [
+        int(record["generator"]["coverage_angle_update_quantization_corrections"])
+        for record in records
+        if record["generator"]["coverage_angle_update_quantization_corrections"] is not None
+    ]
+    angle_quantization_relative_norms = [
+        float(record["generator"]["coverage_angle_update_quantization_relative_norm"])
+        for record in records
+        if record["generator"]["coverage_angle_update_quantization_relative_norm"] is not None
     ]
     technical = {
         "frozen_config": frozen_config,
@@ -235,6 +253,22 @@ def _read_run(
         "adam_steps_requiring_refinement": sum(
             iterations > 1 for iterations in adam_correction_iterations
         ),
+        "adam_quantization_corrections_maximum": max(adam_quantization_corrections),
+        "adam_quantization_corrections_within_64": (
+            min(adam_quantization_corrections) >= 0
+            and max(adam_quantization_corrections) <= 64
+        ),
+        "full_adam_quantization_repair_unused": (
+            max(adam_quantization_corrections) == 0 if variant is FULL else True
+        ),
+        "adam_steps_requiring_quantization_repair": sum(
+            corrections > 0 for corrections in adam_quantization_corrections
+        ),
+        "maximum_adam_quantization_relative_norm": max(adam_quantization_relative_norms),
+        "adam_quantization_repair_within_2e_2": (
+            min(adam_quantization_relative_norms) >= 0
+            and max(adam_quantization_relative_norms) <= 0.02
+        ),
         "angle_correction_iterations_maximum": (
             max(angle_correction_iterations) if angle_correction_iterations else None
         ),
@@ -242,6 +276,36 @@ def _read_run(
             sum(iterations > 1 for iterations in angle_correction_iterations)
             if angle_correction_iterations
             else None
+        ),
+        "angle_quantization_corrections_maximum": (
+            max(angle_quantization_corrections) if angle_quantization_corrections else None
+        ),
+        "angle_quantization_corrections_within_64": (
+            min(angle_quantization_corrections) >= 0
+            and max(angle_quantization_corrections) <= 64
+            if phase == "b"
+            else not angle_quantization_corrections
+        ),
+        "full_angle_quantization_repair_unused": (
+            max(angle_quantization_corrections) == 0
+            if phase == "b" and variant is FULL
+            else True
+        ),
+        "angle_steps_requiring_quantization_repair": (
+            sum(corrections > 0 for corrections in angle_quantization_corrections)
+            if angle_quantization_corrections
+            else None
+        ),
+        "maximum_angle_quantization_relative_norm": (
+            max(angle_quantization_relative_norms)
+            if angle_quantization_relative_norms
+            else None
+        ),
+        "angle_quantization_repair_within_2e_2": (
+            min(angle_quantization_relative_norms) >= 0
+            and max(angle_quantization_relative_norms) <= 0.02
+            if phase == "b"
+            else not angle_quantization_relative_norms
         ),
     }
     technical["all_passed"] = all(
@@ -253,8 +317,14 @@ def _read_run(
             technical["shared_ratio_within_1e_5"],
             technical["shared_adam_ratio_within_1e_4"],
             technical["adam_proposal_within_1e_5"],
+            technical["adam_quantization_corrections_within_64"],
+            technical["full_adam_quantization_repair_unused"],
+            technical["adam_quantization_repair_within_2e_2"],
             technical["angle_gradient_within_1e_5"],
             technical["angle_update_within_1e_4"],
+            technical["angle_quantization_corrections_within_64"],
+            technical["full_angle_quantization_repair_unused"],
+            technical["angle_quantization_repair_within_2e_2"],
         )
     )
     return {

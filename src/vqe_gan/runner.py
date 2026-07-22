@@ -701,6 +701,20 @@ def _validate_reference_budget_metrics(
     adam_error = metrics.coverage_shared_adam_ratio_relative_error
     if adam_error is None or not math.isfinite(adam_error) or adam_error > 1e-4:
         raise RuntimeError("shared Adam budget exceeded its frozen tolerance")
+    adam_quantization_corrections = metrics.coverage_shared_adam_quantization_corrections
+    adam_quantization_relative_norm = metrics.coverage_shared_adam_quantization_relative_norm
+    if (
+        adam_quantization_corrections is None
+        or not 0 <= adam_quantization_corrections <= 64
+        or adam_quantization_relative_norm is None
+        or not math.isfinite(adam_quantization_relative_norm)
+        or not 0 <= adam_quantization_relative_norm <= 0.02
+    ):
+        raise RuntimeError("shared Adam quantization repair exceeded its frozen limits")
+    if config.coverage_budget_mode is CoverageBudgetMode.RECORD and (
+        adam_quantization_corrections != 0 or adam_quantization_relative_norm != 0
+    ):
+        raise RuntimeError("full reference Adam update unexpectedly used quantization repair")
     proposal_error = metrics.coverage_shared_adam_proposal_relative_error
     if proposal_error is None or not math.isfinite(proposal_error) or proposal_error > 1e-5:
         raise RuntimeError("analytical and realized Adam updates disagree")
@@ -719,6 +733,20 @@ def _validate_reference_budget_metrics(
             or angle_update_error > 1e-4
         ):
             raise RuntimeError("angle Adam update budget exceeded its frozen tolerance")
+        angle_quantization_corrections = metrics.coverage_angle_update_quantization_corrections
+        angle_quantization_relative_norm = metrics.coverage_angle_update_quantization_relative_norm
+        if (
+            angle_quantization_corrections is None
+            or not 0 <= angle_quantization_corrections <= 64
+            or angle_quantization_relative_norm is None
+            or not math.isfinite(angle_quantization_relative_norm)
+            or not 0 <= angle_quantization_relative_norm <= 0.02
+        ):
+            raise RuntimeError("angle Adam quantization repair exceeded its frozen limits")
+        if config.coverage_budget_mode is CoverageBudgetMode.RECORD and (
+            angle_quantization_corrections != 0 or angle_quantization_relative_norm != 0
+        ):
+            raise RuntimeError("full reference angle update unexpectedly used quantization repair")
 
 
 def _budget_target_from_metrics(

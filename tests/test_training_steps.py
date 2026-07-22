@@ -18,6 +18,7 @@ from vqe_gan.training import (
     measure_relational_gradient_diagnostics,
     relational_coverage_generator_step,
 )
+from vqe_gan.training.steps import _repair_quantized_displacement_norm
 
 
 class CountingEnergyBackend(nn.Module):
@@ -364,14 +365,39 @@ def test_relational_reference_budget_matches_shared_and_angle_optimizer_paths() 
     assert replay.coverage_angle_update_relative_error <= 1e-4
     assert replay.coverage_shared_adam_ratio_relative_error <= 1e-4
     assert replay.coverage_shared_adam_proposal_relative_error <= 1e-5
-    assert 1 <= replay.coverage_shared_adam_correction_iterations <= 8
-    assert 1 <= replay.coverage_angle_update_correction_iterations <= 8
+    assert 1 <= replay.coverage_shared_adam_correction_iterations <= 33
+    assert 1 <= replay.coverage_angle_update_correction_iterations <= 33
+    assert replay.coverage_shared_adam_quantization_corrections == 0
+    assert replay.coverage_shared_adam_quantization_relative_norm == 0.0
+    assert replay.coverage_angle_update_quantization_corrections == 0
+    assert replay.coverage_angle_update_quantization_relative_norm == 0.0
     assert (
         replay.coverage_shared_adam_ratio_relative_error
         < replay.coverage_shared_adam_uncorrected_relative_error
     )
     assert replay.effective_coverage_weight == pytest.approx(0.01 / 7.0, rel=1e-5)
     assert replay.coverage_angle_update_multiplier is not None
+
+
+def test_quantized_displacement_repair_closes_a_scalar_float32_gap() -> None:
+    parameter = nn.Parameter(torch.tensor([1.0], dtype=torch.float32))
+    before = (parameter.detach().clone(),)
+    base_updates = (torch.tensor([-0.001], dtype=torch.float32),)
+    target = torch.tensor(0.0010002, dtype=torch.float32)
+
+    achieved, error, corrections, relative_perturbation = (
+        _repair_quantized_displacement_norm(
+            (parameter,),
+            before,
+            base_updates,
+            target,
+        )
+    )
+
+    assert achieved > 0
+    assert error <= 1e-4
+    assert corrections == 1
+    assert relative_perturbation <= 0.02
 
 
 @pytest.mark.parametrize("match_angle_head_budget", [False, True])

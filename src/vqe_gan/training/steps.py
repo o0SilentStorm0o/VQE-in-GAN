@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -84,6 +85,8 @@ class GeneratorStepMetrics:
     coverage_shared_adam_update_multiplier: float | None = None
     coverage_shared_adam_proposal_relative_error: float | None = None
     coverage_shared_adam_correction_iterations: int | None = None
+    coverage_shared_adam_quantization_corrections: int | None = None
+    coverage_shared_adam_quantization_relative_norm: float | None = None
     coverage_angle_gradient_target_norm: float | None = None
     coverage_angle_gradient_achieved_norm: float | None = None
     coverage_angle_gradient_relative_error: float | None = None
@@ -92,6 +95,8 @@ class GeneratorStepMetrics:
     coverage_angle_update_relative_error: float | None = None
     coverage_angle_update_multiplier: float | None = None
     coverage_angle_update_correction_iterations: int | None = None
+    coverage_angle_update_quantization_corrections: int | None = None
+    coverage_angle_update_quantization_relative_norm: float | None = None
 
 
 def discriminator_step(
@@ -776,47 +781,62 @@ def relational_coverage_generator_step(
             .to(torch.float64)
         )
         adam_correction_iterations = 0
+        adam_quantization_corrections = 0
+        adam_quantization_relative_norm = 0.0
         if budget_target is not None:
-            for iteration in range(1, 9):
+            def realize_shared_adam_ratio(multiplier: Tensor) -> Tensor:
                 _write_scaled_parameter_displacement(
                     shared_parameters,
                     shared_before,
                     adam_anchor_updates,
                     uncorrected_adam_auxiliary_updates,
-                    adam_update_multiplier,
+                    multiplier,
                 )
-                achieved_shared_updates = _parameter_displacements(
+                realized_shared_updates = _parameter_displacements(
                     shared_parameters,
                     shared_before,
                 )
-                achieved_adam_auxiliary_updates = tuple(
+                realized_adam_auxiliary_updates = tuple(
                     total_update - anchor_update
                     for total_update, anchor_update in zip(
-                        achieved_shared_updates,
+                        realized_shared_updates,
                         adam_anchor_updates,
                         strict=True,
                     )
                 )
-                adam_auxiliary_ratio = (
-                    _tensor_gradient_norm(achieved_adam_auxiliary_updates) / adam_anchor_update_norm
+                return (
+                    _tensor_gradient_norm(realized_adam_auxiliary_updates)
+                    / adam_anchor_update_norm
                 )
+
+            (
+                adam_update_multiplier,
+                adam_auxiliary_ratio,
+                adam_ratio_relative_error,
+                adam_correction_iterations,
+            ) = _refine_realized_displacement_scale(
+                realize_shared_adam_ratio,
+                adam_update_multiplier,
+                adam_target_ratio,
+            )
+            if adam_ratio_relative_error > 1e-4:
+                (
+                    achieved_adam_auxiliary_norm,
+                    _,
+                    adam_quantization_corrections,
+                    adam_quantization_relative_norm,
+                ) = _repair_quantized_displacement_norm(
+                    shared_parameters,
+                    shared_before,
+                    adam_anchor_updates,
+                    adam_target_ratio * adam_anchor_update_norm,
+                )
+                adam_auxiliary_ratio = achieved_adam_auxiliary_norm / adam_anchor_update_norm
                 adam_ratio_relative_error = _relative_error(
                     adam_auxiliary_ratio,
                     adam_target_ratio,
                 )
-                adam_correction_iterations = iteration
-                if adam_ratio_relative_error <= 1e-5:
-                    break
-                if adam_auxiliary_ratio.item() <= epsilon:
-                    raise RuntimeError("realized shared Adam correction is too small")
-                adam_update_multiplier = (
-                    adam_update_multiplier
-                    * adam_target_ratio.to(torch.float64)
-                    / adam_auxiliary_ratio.to(torch.float64)
-                )
         else:
-            achieved_shared_updates = ordinary_shared_updates
-            achieved_adam_auxiliary_updates = uncorrected_adam_auxiliary_updates
             adam_auxiliary_ratio = uncorrected_adam_auxiliary_ratio
             adam_ratio_relative_error = _relative_error(
                 adam_auxiliary_ratio,
@@ -828,6 +848,8 @@ def relational_coverage_generator_step(
         angle_update_relative_error = None
         angle_update_multiplier = None
         angle_update_correction_iterations = None
+        angle_update_quantization_corrections = None
+        angle_update_quantization_relative_norm = None
         if match_angle_head_budget:
             ordinary_angle_updates = _parameter_displacements(
                 angle_parameters,
@@ -851,9 +873,12 @@ def relational_coverage_generator_step(
                 (target_angle_update / proposed_angle_update_norm).detach().to(torch.float64)
             )
             angle_update_correction_iterations = 0
+            angle_update_quantization_corrections = 0
+            angle_update_quantization_relative_norm = 0.0
             if budget_target is not None:
                 zero_updates = tuple(torch.zeros_like(update) for update in ordinary_angle_updates)
-                for iteration in range(1, 9):
+
+                def realize_angle_update(multiplier: Tensor) -> Tensor:
                     _write_scaled_parameter_displacement(
                         angle_parameters,
                         angle_before,
@@ -861,23 +886,32 @@ def relational_coverage_generator_step(
                         ordinary_angle_updates,
                         multiplier,
                     )
-                    achieved_angle_update = _parameter_displacement_norm(
+                    return _parameter_displacement_norm(
                         angle_parameters,
                         angle_before,
                     )
-                    angle_update_relative_error = _relative_error(
+
+                (
+                    multiplier,
+                    achieved_angle_update,
+                    angle_update_relative_error,
+                    angle_update_correction_iterations,
+                ) = _refine_realized_displacement_scale(
+                    realize_angle_update,
+                    multiplier,
+                    target_angle_update,
+                )
+                if angle_update_relative_error > 1e-4:
+                    (
                         achieved_angle_update,
+                        angle_update_relative_error,
+                        angle_update_quantization_corrections,
+                        angle_update_quantization_relative_norm,
+                    ) = _repair_quantized_displacement_norm(
+                        angle_parameters,
+                        angle_before,
+                        zero_updates,
                         target_angle_update,
-                    )
-                    angle_update_correction_iterations = iteration
-                    if angle_update_relative_error <= 1e-5:
-                        break
-                    if achieved_angle_update.item() <= epsilon:
-                        raise RuntimeError("realized angle-head correction is too small")
-                    multiplier = (
-                        multiplier
-                        * target_angle_update.to(torch.float64)
-                        / achieved_angle_update.to(torch.float64)
                     )
             else:
                 achieved_angle_update = proposed_angle_update_norm
@@ -933,6 +967,8 @@ def relational_coverage_generator_step(
         coverage_shared_adam_update_multiplier=adam_update_multiplier.item(),
         coverage_shared_adam_proposal_relative_error=(adam_proposal_relative_error.item()),
         coverage_shared_adam_correction_iterations=adam_correction_iterations,
+        coverage_shared_adam_quantization_corrections=(adam_quantization_corrections),
+        coverage_shared_adam_quantization_relative_norm=(adam_quantization_relative_norm),
         coverage_angle_gradient_target_norm=angle_gradient_target_norm,
         coverage_angle_gradient_achieved_norm=angle_gradient_achieved_norm,
         coverage_angle_gradient_relative_error=angle_gradient_relative_error,
@@ -941,6 +977,12 @@ def relational_coverage_generator_step(
         coverage_angle_update_relative_error=angle_update_relative_error,
         coverage_angle_update_multiplier=angle_update_multiplier,
         coverage_angle_update_correction_iterations=(angle_update_correction_iterations),
+        coverage_angle_update_quantization_corrections=(
+            angle_update_quantization_corrections
+        ),
+        coverage_angle_update_quantization_relative_norm=(
+            angle_update_quantization_relative_norm
+        ),
     )
 
 
@@ -994,6 +1036,220 @@ def _write_scaled_parameter_displacement(
                 + multiplier * auxiliary.to(torch.float64)
             )
             parameter.copy_(corrected.to(parameter.dtype))
+
+
+def _refine_realized_displacement_scale(
+    realize: Callable[[Tensor], Tensor],
+    initial_multiplier: Tensor,
+    target: Tensor,
+    *,
+    tolerance: float = 1e-5,
+    max_writes: int = 33,
+) -> tuple[Tensor, Tensor, float, int]:
+    """Match a positive realized norm despite staircase-like parameter rounding."""
+
+    if initial_multiplier.numel() != 1 or target.numel() != 1:
+        raise ValueError("displacement multiplier and target must be scalars")
+    if tolerance <= 0:
+        raise ValueError("displacement tolerance must be positive")
+    if max_writes < 3:
+        raise ValueError("displacement refinement requires at least three writes")
+    initial_value = float(initial_multiplier.detach().item())
+    target_value = float(target.detach().item())
+    if not torch.isfinite(initial_multiplier) or initial_value < 0:
+        raise RuntimeError("initial displacement multiplier is invalid")
+    if not torch.isfinite(target) or target_value <= 0:
+        raise RuntimeError("displacement target is invalid")
+
+    samples: list[tuple[float, Tensor, float]] = []
+    current_value: float | None = None
+    writes = 0
+
+    def evaluate(multiplier_value: float) -> tuple[Tensor, float]:
+        nonlocal current_value, writes
+        multiplier = initial_multiplier.new_tensor(multiplier_value)
+        if not torch.isfinite(multiplier) or multiplier.item() < 0:
+            raise RuntimeError("realized displacement multiplier is invalid")
+        achieved = realize(multiplier).detach()
+        writes += 1
+        current_value = multiplier_value
+        if achieved.numel() != 1 or not torch.isfinite(achieved) or achieved.item() < 0:
+            raise RuntimeError("realized parameter displacement is invalid")
+        error = _relative_error(achieved, target)
+        samples.append((multiplier_value, achieved, error))
+        return achieved, error
+
+    def best_sample() -> tuple[float, Tensor, float]:
+        return min(samples, key=lambda sample: sample[2])
+
+    achieved, error = evaluate(initial_value)
+    if error <= tolerance:
+        return initial_multiplier.new_tensor(initial_value), achieved, error, writes
+
+    search_write_limit = max_writes - 1
+    if achieved.item() > 0 and writes < search_write_limit:
+        rescaled_value = initial_value * target_value / float(achieved.item())
+        if rescaled_value != initial_value:
+            achieved, error = evaluate(rescaled_value)
+            if error <= tolerance:
+                return initial_multiplier.new_tensor(rescaled_value), achieved, error, writes
+
+    def bracket() -> tuple[tuple[float, Tensor, float] | None, tuple[float, Tensor, float] | None]:
+        lower = [sample for sample in samples if sample[1].item() <= target_value]
+        upper = [sample for sample in samples if sample[1].item() >= target_value]
+        return (
+            max(lower, key=lambda sample: sample[0]) if lower else None,
+            min(upper, key=lambda sample: sample[0]) if upper else None,
+        )
+
+    lower, upper = bracket()
+    if lower is None and writes < search_write_limit:
+        achieved, error = evaluate(0.0)
+        if error <= tolerance:
+            return initial_multiplier.new_tensor(0.0), achieved, error, writes
+        lower, upper = bracket()
+
+    while upper is None and writes < search_write_limit:
+        largest_value = max(sample[0] for sample in samples)
+        expanded_value = 1.0 if largest_value == 0 else 2.0 * largest_value
+        if not torch.isfinite(initial_multiplier.new_tensor(expanded_value)):
+            break
+        achieved, error = evaluate(expanded_value)
+        if error <= tolerance:
+            return initial_multiplier.new_tensor(expanded_value), achieved, error, writes
+        lower, upper = bracket()
+
+    while lower is not None and upper is not None and writes < search_write_limit:
+        lower_value = lower[0]
+        upper_value = upper[0]
+        midpoint_value = lower_value + (upper_value - lower_value) / 2.0
+        if midpoint_value in {lower_value, upper_value}:
+            break
+        achieved, error = evaluate(midpoint_value)
+        if error <= tolerance:
+            return initial_multiplier.new_tensor(midpoint_value), achieved, error, writes
+        if achieved.item() <= target_value:
+            lower = samples[-1]
+        else:
+            upper = samples[-1]
+
+    best_value, best_achieved, best_error = best_sample()
+    if current_value != best_value:
+        best_achieved, best_error = evaluate(best_value)
+    return initial_multiplier.new_tensor(best_value), best_achieved, best_error, writes
+
+
+def _repair_quantized_displacement_norm(
+    parameters: tuple[torch.nn.Parameter, ...],
+    before: tuple[Tensor, ...],
+    base_updates: tuple[Tensor, ...],
+    target: Tensor,
+    *,
+    tolerance: float = 1e-4,
+    max_corrections: int = 64,
+    max_relative_perturbation: float = 0.02,
+) -> tuple[Tensor, float, int, float]:
+    """Close a float32 norm gap with bounded adjacent-coordinate moves."""
+
+    if target.numel() != 1 or not torch.isfinite(target) or target.item() <= 0:
+        raise RuntimeError("quantized displacement target is invalid")
+    if len(parameters) != len(before) or len(parameters) != len(base_updates):
+        raise ValueError("quantized displacement tuples must have the same length")
+    if tolerance <= 0 or max_corrections <= 0 or max_relative_perturbation <= 0:
+        raise ValueError("quantized displacement repair limits must be positive")
+
+    def auxiliary_displacements() -> tuple[Tensor, ...]:
+        return tuple(
+            (parameter.detach() - value) - base
+            for parameter, value, base in zip(
+                parameters,
+                before,
+                base_updates,
+                strict=True,
+            )
+        )
+
+    scalar_auxiliary = tuple(value.clone() for value in auxiliary_displacements())
+    achieved = _tensor_gradient_norm(scalar_auxiliary)
+    error = _relative_error(achieved, target)
+    corrections = 0
+
+    while error > tolerance and corrections < max_corrections:
+        current_auxiliary = auxiliary_displacements()
+        desired_square_delta = target.square() - achieved.square()
+        candidates: list[tuple[float, int, int, float]] = []
+        for parameter_index, (parameter, value, base, current) in enumerate(
+            zip(parameters, before, base_updates, current_auxiliary, strict=True)
+        ):
+            for direction in (float("inf"), float("-inf")):
+                adjacent = torch.nextafter(
+                    parameter.detach(),
+                    torch.full_like(parameter, direction),
+                )
+                adjacent_auxiliary = (adjacent - value) - base
+                square_delta = adjacent_auxiliary.square() - current.square()
+                score = (square_delta - desired_square_delta).abs()
+                score = torch.where(
+                    (square_delta != 0) & torch.isfinite(score) & torch.isfinite(adjacent),
+                    score,
+                    torch.full_like(score, float("inf")),
+                )
+                candidate_count = min(4, score.numel())
+                scores, indices = torch.topk(
+                    score.flatten(),
+                    candidate_count,
+                    largest=False,
+                )
+                for candidate_score, flat_index in zip(
+                    scores.tolist(),
+                    indices.tolist(),
+                    strict=True,
+                ):
+                    if candidate_score != float("inf"):
+                        candidates.append(
+                            (
+                                candidate_score,
+                                parameter_index,
+                                flat_index,
+                                adjacent.flatten()[flat_index].item(),
+                            )
+                        )
+        candidates.sort()
+        accepted = False
+        for _, parameter_index, flat_index, adjacent_value in candidates:
+            parameter = parameters[parameter_index]
+            flat_parameter = parameter.view(-1)
+            previous_value = flat_parameter[flat_index].detach().clone()
+            with torch.no_grad():
+                flat_parameter[flat_index] = adjacent_value
+            candidate_achieved = _tensor_gradient_norm(auxiliary_displacements())
+            candidate_error = _relative_error(candidate_achieved, target)
+            if candidate_error < error:
+                achieved = candidate_achieved
+                error = candidate_error
+                corrections += 1
+                accepted = True
+                break
+            with torch.no_grad():
+                flat_parameter[flat_index] = previous_value
+        if not accepted:
+            raise RuntimeError("quantized displacement repair cannot improve the realized norm")
+
+    if error > tolerance:
+        raise RuntimeError("quantized displacement repair exceeded its correction limit")
+    repaired_auxiliary = auxiliary_displacements()
+    perturbation = tuple(
+        repaired - scalar
+        for repaired, scalar in zip(repaired_auxiliary, scalar_auxiliary, strict=True)
+    )
+    relative_perturbation = (_tensor_gradient_norm(perturbation) / achieved).item()
+    if not torch.isfinite(achieved) or not torch.isfinite(
+        achieved.new_tensor(relative_perturbation)
+    ):
+        raise RuntimeError("quantized displacement repair is non-finite")
+    if relative_perturbation > max_relative_perturbation:
+        raise RuntimeError("quantized displacement repair exceeded its perturbation limit")
+    return achieved, error, corrections, relative_perturbation
 
 
 def _adam_proposed_updates(
