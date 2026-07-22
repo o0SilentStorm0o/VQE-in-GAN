@@ -95,6 +95,13 @@ iterations, stopping when relative error is at most `1e-5`. The frozen acceptanc
 the target nor the update direction, performs no clipping, and is also used for the Phase B angle
 displacement. Full reference updates require no refinement and remain ordinary Adam updates.
 
+A second production attempt stopped before evaluation at full seed-43 step 147 when the Adam
+proposal check narrowly exceeded `1e-5`. The controller used an algebraically equivalent Adam
+formula, but its separate float32 multiply/divide operations did not reproduce PyTorch's in-place
+`lerp_`, `addcmul_`, and `addcdiv_` rounding exactly. The counterfactual proposal now executes those
+same operations on cloned tensors before measuring displacement. The optimizer, frozen tolerance,
+budget target, and ordinary full update are unchanged.
+
 ## Phase A: fixed image-to-circuit map
 
 The entire angle head is zero-output initialized and frozen. Therefore the circuit angles are the
