@@ -830,6 +830,10 @@ def relational_coverage_generator_step(
                     shared_before,
                     adam_anchor_updates,
                     adam_target_ratio * adam_anchor_update_norm,
+                    error_measure=lambda achieved_norm: _relative_error(
+                        achieved_norm / adam_anchor_update_norm,
+                        adam_target_ratio,
+                    ),
                 )
                 adam_auxiliary_ratio = achieved_adam_auxiliary_norm / adam_anchor_update_norm
                 adam_ratio_relative_error = _relative_error(
@@ -1146,8 +1150,9 @@ def _repair_quantized_displacement_norm(
     target: Tensor,
     *,
     tolerance: float = 1e-4,
-    max_corrections: int = 128,
+    max_corrections: int = 512,
     max_relative_perturbation: float = 0.02,
+    error_measure: Callable[[Tensor], float] | None = None,
 ) -> tuple[Tensor, float, int, float]:
     """Close a float32 norm gap with bounded adjacent-coordinate moves."""
 
@@ -1169,9 +1174,15 @@ def _repair_quantized_displacement_norm(
             )
         )
 
+    def measured_error(value: Tensor) -> float:
+        error = _relative_error(value, target) if error_measure is None else error_measure(value)
+        if error < 0 or not torch.isfinite(value.new_tensor(error)):
+            raise RuntimeError("quantized displacement error measure is invalid")
+        return error
+
     scalar_auxiliary = tuple(value.clone() for value in auxiliary_displacements())
     achieved = _tensor_gradient_norm(scalar_auxiliary)
-    error = _relative_error(achieved, target)
+    error = measured_error(achieved)
     corrections = 0
 
     while error > tolerance and corrections < max_corrections:
@@ -1223,7 +1234,7 @@ def _repair_quantized_displacement_norm(
             with torch.no_grad():
                 flat_parameter[flat_index] = adjacent_value
             candidate_achieved = _tensor_gradient_norm(auxiliary_displacements())
-            candidate_error = _relative_error(candidate_achieved, target)
+            candidate_error = measured_error(candidate_achieved)
             if candidate_error < error:
                 achieved = candidate_achieved
                 error = candidate_error
