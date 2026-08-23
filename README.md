@@ -1,317 +1,257 @@
-# VQE-in-GAN: Exploratory Integration of VQE-Inspired Energy Terms in GANs
+# VQE-in-GAN: V3 Controlled Quantum-Utility Experiments
 
-> **Experiment redesign in progress:** The original notebooks and result artifacts are retained as
-> a historical record. The modular implementation under `src/` now passes backend, gradient, and
-> optimizer-isolation tests. The original mechanism remains a negative result. A frozen
-> class-contrastive candidate improved mean conditional accuracy by 0.77 percentage points over
-> its classical control, but worsened mean class-FID and therefore failed its held-out stop rule.
-> A later trainable relational-coverage candidate improved development-set distribution metrics,
-> but failed its circuit-specific controls: its apparent advantage traded away class accuracy and
-> an initialization-only gradient match did not persist during training. A final full-trajectory
-> reference-budget diagnostic removed both raw-gradient and Adam-step confounds. Its trainable
-> angle head improved the full candidate, but neither frozen phase passed both circuit controls,
-> so no held-out seed was authorized or run.
-> The complete evidence and stopping rules are recorded in
-> [`docs/quantum_utility_audit.md`](docs/quantum_utility_audit.md).
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](pyproject.toml)
+[![Status: V3 falsification result](https://img.shields.io/badge/status-V3%20falsification%20result-orange.svg)](docs/quantum_utility_audit.md)
 
-The historical and corrected Hamiltonian families, including the class-separation objective, are
-specified in [`docs/hamiltonian_design.md`](docs/hamiltonian_design.md).
-The corrected shared generator and optimizer isolation are specified in
-[`docs/shared_generator_design.md`](docs/shared_generator_design.md).
-The current exploratory pilot and draft ablation protocol are documented in
-[`docs/pilot_500_steps.md`](docs/pilot_500_steps.md) and
-[`docs/ablation_protocol_draft.md`](docs/ablation_protocol_draft.md).
-The separate frozen contrastive-reference experiment is specified in
-[`docs/contrastive_reference_protocol.md`](docs/contrastive_reference_protocol.md).
-Its post-hoc causal diagnosis is in
-[`docs/contrastive_failure_diagnosis.md`](docs/contrastive_failure_diagnosis.md).
-The trainable relational mechanism, circuit controls, and gradient-matched diagnosis are recorded
-in [`docs/trainable_relational_coverage_protocol.md`](docs/trainable_relational_coverage_protocol.md)
-and
-[`docs/relational_gradient_matched_diagnostic_protocol.md`](docs/relational_gradient_matched_diagnostic_protocol.md).
-The two-stage full-trajectory follow-up is specified in
-[`docs/reference_budget_relational_protocol.md`](docs/reference_budget_relational_protocol.md),
-with completed results in
-[`docs/reference_budget_relational_results.md`](docs/reference_budget_relational_results.md).
+This repository studies whether a small differentiable quantum circuit can provide a useful and
+specifically quantum inductive bias to an Auxiliary Classifier GAN (ACGAN). V3 rebuilds the
+experiment around a generator-shared image path, deterministic execution, matched classical and
+circuit controls, frozen stopping rules, and optimizer-level budget matching.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
-[![Qiskit](https://img.shields.io/badge/Qiskit-1.0+-6929C4.svg)](https://qiskit.org/)
-[![Status](https://img.shields.io/badge/status-V2%20Negative%20Result-red.svg)]()
+The repository name is historical. V3 evaluates differentiable circuit-derived energy and
+similarity objectives inside GAN training; it does not run a standalone ground-state VQE solver.
 
-> **⚠️ V2 Research Status: NEGATIVE RESULT**  
-> This repository reports a **negative result**: Classical ablation experiments demonstrate that the VQE quantum module provides **no measurable causal benefit** over simple classical alternatives. The hybrid architecture trains successfully, but quantum-specific contribution is undetectable. We publish this as an honest negative result to benefit the quantum ML research community.
+## Current result
 
----
+The narrow V3 conclusion is:
 
-## 📋 Overview
+> A trainable image-to-angle path improved the full coherent-entangled candidate on the two
+> development seeds, but the candidate did not robustly outperform both the product-circuit and
+> dephased controls. The tested mechanism therefore provides no demonstrated quantum-specific
+> benefit.
 
-This repository accompanies the paper:
+This is not a claim that quantum-assisted GANs cannot work. It is a falsification result for the
+specific four-qubit, noiseless-statevector mechanisms tested here. No computational quantum
+advantage is claimed.
 
-> *"Differentiable Energy-Based Regularization in GANs: A Simulator-Based Exploration of VQE-Inspired Auxiliary Losses"* — **V2 (with Ablation Study)**
+The strongest V3 diagnostic used two phases, CPU seeds 42 and 43, 200 training steps per run, and
+5,000 balanced evaluation samples. Lower class-FID is better; higher conditional accuracy and
+diversity are better.
 
-We investigated whether VQE-computed energy terms can serve as auxiliary regularization signals in GAN training. **The ablation study (V2) demonstrates that equivalent or superior results can be achieved with simple classical baselines.**
+| Phase | Circuit variant | Mean class-FID ↓ | Mean accuracy ↑ | Mean diversity ↑ |
+| --- | --- | ---: | ---: | ---: |
+| A: frozen angle head | Full coherent-entangled | 0.426880 | 0.644900 | 0.557745 |
+| A: frozen angle head | Product | 0.451794 | 0.616300 | 0.551010 |
+| A: frozen angle head | Dephased | 0.418598 | 0.673100 | 0.562932 |
+| B: trainable angle head | Full coherent-entangled | 0.402251 | 0.673600 | 0.574536 |
+| B: trainable angle head | Product | 0.410949 | 0.666700 | 0.574639 |
+| B: trainable angle head | Dephased | 0.420250 | 0.718300 | 0.551205 |
 
-### What This Is
+Phase B improved the full branch over Phase A on all three mean metrics and passed the frozen
+incremental angle-head gate. It still failed the circuit-specific gate:
 
-- ✅ **Technical feasibility demonstration** of VQE-GAN integration
-- ✅ **Honest negative result** showing VQE provides no unique benefit
-- ✅ **Complete ablation study** against four classical alternatives
-- ✅ **Open-source reference implementation** for reproducibility
+- product had lower class-FID on one of the two seeds;
+- dephased preserved substantially higher mean conditional accuracy; and
+- neither comparison satisfied every frozen per-seed and mean requirement.
 
-### What This Is NOT
+All 2,400 training records passed the technical audit, including shared raw-gradient matching,
+Adam auxiliary-displacement matching, schedule integrity, and the separately controlled Phase B
+angle-head budget. Because neither phase passed both circuit controls, no held-out seed was
+authorized or run.
 
-- ❌ **NOT** a claim of quantum advantage
-- ❌ **NOT** evidence of quantum-specific benefit (proven by ablation)
-- ❌ **NOT** validated on real quantum hardware
+See [the complete result and stop decision](docs/reference_budget_relational_results.md) and
+[the full quantum-utility audit](docs/quantum_utility_audit.md).
 
----
+## What changed in V3
 
-## 🔬 Key Finding: Negative Result
+The historical experiment attached a class-conditioned Ising energy to the GAN, but the quantum
+branch did not receive a meaningful image-derived learning target. V3 makes the causal path
+explicit:
 
-### Ablation Study Summary (V2)
-
-We tested the QACGAN against four classical baselines with pre-registered equivalence thresholds (δ_Acc=±3%, δ_FID=±5, δ_IS=±0.3, δ_LPIPS=±0.05):
-
-| Variant | Accuracy (%) | FID (↓) | IS (↑) | LPIPS (↑) |
-|---------|-------------|---------|--------|-----------|
-| **MLP-Energy** | 99.1 ± 0.5 | 21.33 ± 2.97 | 2.11 ± 0.04 | 0.166 ± 0.006 |
-| **Learned Bias** | 99.0 ± 0.6 | **18.43 ± 1.03** | 2.09 ± 0.06 | 0.164 ± 0.007 |
-| **Random Noise** | 99.2 ± 0.4 | 20.77 ± 3.67 | 2.16 ± 0.07 | 0.165 ± 0.006 |
-| **No Regularizer** | 99.0 ± 0.4 | 20.59 ± 2.72 | 2.11 ± 0.05 | 0.165 ± 0.009 |
-| *QACGAN (VQE) ref* | *99.5 ± 0.5* | *27.9 ± 8.0* | *2.07 ± 0.1* | *—* |
-
-**Statistical Conclusion:** All classical variants fall within equivalence thresholds of QACGAN. No paired t-test achieved p < 0.05. Cohen's d < 0.8 for all comparisons. **The VQE module provides no measurable causal benefit.**
-
-### Why This Happened
-
-The quantum module **does not see real data**—it operates solely on latent variables (z, class label). The Hamiltonian parameters are **static coefficients**, not learned from data. This means the VQE acts as a **deterministic nonlinear function** of the class label, which any simple classical function can replicate.
-
----
-
-## 🏗️ Architecture
-
-The model extends ACGAN by adding a VQE-based energy term to the generator objective:
-
-$$\mathcal{L}_{G} = \mathcal{L}_{\text{adv}} + \mathcal{L}_{\text{aux}} + \lambda_{\text{VQE}} \cdot E_c$$
-
-where $E_c$ is the expectation value of a class-specific Ising Hamiltonian computed via a 4-qubit `EfficientSU2` ansatz.
-
-**Critical limitation:** Since the Hamiltonian parameters depend only on class labels (not learned from data), this is functionally equivalent to a class-dependent scalar bias.
-
----
-
-## 📁 Repository Structure
-
-```
-├── QACGAN_training_5Epochs.ipynb         # Exploratory run (5 epochs)
-├── QACGAN_training_RUN1.ipynb            # Extended run 1 (10 epochs, seed 42)
-├── QACGAN_training_RUN2.ipynb            # Extended run 2 (10 epochs, seed 2025)
-├── qacgan_training_*.py                  # Python script versions
-│
-├── ABLATION_Classical_Baselines.ipynb    # ⭐ V2: Classical ablation study
-│
-├── ablation_results/                     # ⭐ V2: Ablation study outputs
-│   ├── ablation_all_results.pkl          # Raw experimental data
-│   ├── ablation_summary.json             # Structured results summary
-│   ├── ablation_comparison.png           # Visualization (Fig. 2 in paper)
-│   ├── ablation_table.tex                # LaTeX table for paper
-│   └── *_logs.pkl                        # Per-variant training logs
-│
-├── hybrid_acgan_results_RUN1/            # Run 1 results
-│   ├── hybrid_acgan_images_output/       # Generated samples per epoch
-│   ├── hybrid_acgan_models_output/       # Model checkpoints
-│   └── mnist_classifier.pth              # Evaluation classifier
-│
-├── hybrid_acgan_results_RUN2/            # Run 2 results
-├── hybrid_qacgan_results_5Epochs/        # 5-epoch exploratory results
-│
-├── LICENSE                               # MIT License
-└── README.md                             # This file
+```text
+noise + class
+      │
+      ▼
+unchanged ACGAN image generator ───────────────► generated MNIST image
+      │                                                │
+      │ shared image-producing parameters              ├─ fixed 4×4 image encoding
+      │                                                └─ bounded trainable angle residual
+      │                                                        │
+      │                                                        ▼
+      └──── regularizer gradient ◄──── relational loss ◄──── 4-qubit circuit
+                                                          │
+real MNIST reference images ───── data-derived projectors ┘
 ```
 
----
+The angle head reads only the completed generated image, not the label or latent vector directly.
+Regularizer gradients must reach both the 29,200-parameter angle head and the 1,762,789-parameter
+image-producing path. Discriminator-only and evaluation steps never invoke the quantum backend.
 
-## 🚀 Usage
+The final relational objective compares generated and real samples of the same class in both
+directions:
 
-### Corrected implementation
+- generated-to-real support discourages samples far from every real reference;
+- real-to-generated coverage makes duplicated generated states less useful; and
+- the existing class-conditional log-KDE term remains an unchanged anchor.
+
+The full circuit uses one circular CNOT ring. The product control removes entanglement, and the
+dephased control removes coherence before comparison. For every generator step, the controls
+replay the full branch's shared raw-gradient ratio and actual Adam auxiliary-displacement ratio.
+Phase B also matches the angle-head raw-gradient norm and realized Adam displacement.
+
+The architectural and optimization details are specified in:
+
+- [shared generator design](docs/shared_generator_design.md);
+- [Hamiltonian and circuit design](docs/hamiltonian_design.md);
+- [trainable relational-coverage protocol](docs/trainable_relational_coverage_protocol.md); and
+- [full-trajectory reference-budget protocol](docs/reference_budget_relational_protocol.md).
+
+## Evidence status
+
+| Question | V3 evidence |
+| --- | --- |
+| Does the Torch statevector match the Qiskit reference? | Yes, including angle gradients and batch/class ordering. |
+| Does the auxiliary gradient reach generated pixels? | Yes, through the completed image and shared generator path. |
+| Are optimizer and discriminator boundaries isolated? | Yes, covered by state and call-count tests. |
+| Is exact replay available? | Yes on CPU; the tested MPS distribution-loss path is not replay-deterministic. |
+| Can a real-data-anchored quantum loss help an individual trajectory? | Yes. |
+| Did the frozen contrastive candidate pass held-out screening? | No; accuracy improved slightly while class-FID worsened. |
+| Did the trainable relational candidate beat both circuit controls? | No. |
+| Is coherence or entanglement established as the cause of the improvement? | No. |
+| Is computational quantum advantage established? | No; four noiseless qubits are cheaply simulated. |
+
+Earlier candidates and their failure analyses remain part of the audit trail. In particular, the
+fixed contrastive hybrid improved mean conditional accuracy by 0.00770 on frozen seeds 101 and
+202, but worsened mean class-FID by 0.00585 and failed its preregistered joint gate. The subsequent
+relational candidate fixed the missing trainable angle path and the optimizer-budget confound, but
+still failed quantum-specific attribution.
+
+## Reproduce the code
+
+### Requirements
 
 - Python 3.10–3.12
 - [uv](https://docs.astral.sh/uv/)
+- CPU execution for evidence-grade deterministic replay
 
-### Installation
+### Install and verify
 
 ```bash
 git clone https://github.com/o0SilentStorm0o/VQE-in-GAN.git
 cd VQE-in-GAN
+git switch experiment-v3-rebuild
 uv sync --extra dev
+uv run ruff check .
 uv run pytest -q
 ```
 
-The dependency lock file is authoritative for the redesigned experiment. Quantum backend
-benchmarks can be reproduced with:
+The committed `uv.lock` is authoritative for V3.
+
+### Quantum backend parity and timing
 
 ```bash
-uv run python benchmarks/benchmark_quantum_backends.py --backend all --batch-sizes 1 32 64
+uv run python benchmarks/benchmark_quantum_backends.py \
+  --backend all \
+  --batch-sizes 1 32 64
 ```
 
-A two-step corrected MNIST smoke run can be started with:
+### Minimal corrected smoke run
 
 ```bash
 uv run vqe-gan-train \
   --run-name quantum-smoke \
   --dataset-limit 128 \
   --batch-size 64 \
-  --max-steps 2
+  --max-steps 2 \
+  --device cpu \
+  --quantum-device cpu
 ```
 
-On Apple Silicon, the default `auto` placement keeps the ACGAN on MPS and evaluates the small
-statevector on CPU. MPS is suitable for backend timing and ordinary smoke tests, but paired
-distribution-regularizer replays were not deterministic and are not admissible as experimental
-evidence. Full-step benchmark methodology and results are recorded in
-[`docs/training_step_benchmark.md`](docs/training_step_benchmark.md).
+### Full-trajectory matched-budget diagnostic
 
-The completed CPU falsification pair can be reproduced one seed at a time with:
+Run and audit Phase A before starting Phase B:
 
 ```bash
-uv run python scripts/run_seed_matrix.py \
-  --seed 101 \
-  --output-root runs/contrastive-heldout-seed-101 \
+uv run python scripts/run_reference_budget_relational.py \
+  --phase a \
+  --output-root runs/reference-budget \
   --dataset-root data \
-  --classifier mnist_classifier.pth \
-  --epochs 1 --max-steps 200 --evaluation-samples 5000 \
-  --device cpu --quantum-device cpu \
-  --variants classical_log_kde_contrastive hybrid_modular_kde_contrastive
-```
+  --classifier mnist_classifier.pth
 
-Run the same command with `--seed 202` and a distinct output root for the second pair. Stage 1
-failed its preregistered class-FID gate, so later seeds and causal ablations were intentionally not
-run.
-
-The full-trajectory relational diagnostic must be run and audited one phase at a time. Phase B is
-run only after the Phase A audit has been written:
-
-```bash
-uv run python scripts/run_reference_budget_relational.py \
-  --phase a --output-root runs/reference-budget \
-  --dataset-root data --classifier mnist_classifier.pth
 uv run python scripts/audit_reference_budget_relational.py \
-  --phase a --output-root runs/reference-budget
+  --phase a \
+  --output-root runs/reference-budget
 
 uv run python scripts/run_reference_budget_relational.py \
-  --phase b --output-root runs/reference-budget \
-  --dataset-root data --classifier mnist_classifier.pth
+  --phase b \
+  --output-root runs/reference-budget \
+  --dataset-root data \
+  --classifier mnist_classifier.pth
+
 uv run python scripts/audit_reference_budget_relational.py \
-  --phase b --output-root runs/reference-budget
+  --phase b \
+  --output-root runs/reference-budget
 ```
 
-These commands are intentionally fixed to CPU, development seeds 42 and 43, 200 steps, and 5,000
-balanced evaluation samples. The audit never authorizes held-out execution automatically.
+These scripts intentionally fix the evidence-grade configuration. The audit never authorizes a
+held-out run automatically.
 
-The tested LUMI-G setup, measured MI250X timings, allocation accounting, and the frozen ten-seed
-job-array projection are recorded in [`docs/lumi_g_benchmark.md`](docs/lumi_g_benchmark.md). The
-production array script is [`scripts/lumi_run_array.sbatch`](scripts/lumi_run_array.sbatch); it does
-not embed an allocation account and therefore cannot submit work by itself.
+## Repository layout
 
-### Historical notebooks
-
-The root-level notebooks belong to the original experiment and are retained for traceability.
-They were designed for **Google Colab** with GPU acceleration:
-
-1. Upload any notebook to Colab
-2. Enable GPU runtime (A100 recommended for ablation study)
-3. Run all cells
-
-### Reproducing Ablation Study
-
-```bash
-# Upload ABLATION_Classical_Baselines.ipynb to Colab
-# Expected runtime: ~2-3 hours on A100 GPU
-# Outputs saved to ablation_results/
+```text
+src/vqe_gan/       modular ACGAN, quantum backends, regularizers, training, evaluation
+tests/             backend parity, gradient flow, fairness, budget, and isolation tests
+scripts/           frozen experiment runners, calibrations, audits, and LUMI job templates
+benchmarks/        quantum-backend and end-to-end timing tools
+docs/              protocols, calibration records, result summaries, and causal diagnoses
+runs/              raw V3 outputs and checkpoints (local/release snapshot, not normal Git)
+data/              local MNIST cache (not normal Git)
+*.ipynb            historical V1/V2 notebooks retained for traceability
+ablation_results/  historical V2 classical-ablation artifacts
 ```
 
-### Loading Pretrained Models
+The complete local research snapshot, including ignored raw runs, checkpoints, data, environment,
+preprint, and caches, is documented in
+[the 2026-08-24 snapshot manifest](docs/research_snapshot_2026-08-24.md). Git-tracked protocols and
+summaries remain readable without downloading that archive.
 
-```python
-import torch
+## V1/V2 historical material
 
-# Load generator (define architecture as in notebook first)
-generator.load_state_dict(
-    torch.load('hybrid_acgan_results_RUN1/hybrid_acgan_models_output/hybrid_generator_best.pth')
-)
-```
+The root notebooks, original result directories, and classical ablation belong to the historical
+paper experiment. They are retained unchanged for provenance. Their conclusion is narrower than
+some wording in the old README suggested: the tested fixed VQE-inspired regularizer did not show a
+measurable benefit over its classical alternatives. That result does not prove a universal
+impossibility.
 
----
+V3 is a separate corrective experiment. It does not silently replace historical results, and raw
+artifact provenance continues to record the source revisions under which each run was produced.
+Because contributor metadata was corrected without changing file trees, historical and current
+V3 revision hashes are listed in
+[the identity rewrite map](docs/revision_identity_map_2026-08-24.md).
 
-## ⚙️ Hyperparameters
+## Scope and limitations
 
-| Parameter | Value |
-|-----------|-------|
-| Latent dimension | 100 |
-| Batch size | 64 (2×32 gradient accumulation) |
-| Learning rate | 2×10⁻⁴ |
-| λ_VQE | 0.1 (not tuned) |
-| Qubits | 4 |
-| Ansatz | EfficientSU2 (1 rep.) |
-| Backend | StatevectorEstimator (noiseless) |
+- MNIST and one ACGAN host architecture only.
+- Four noiselessly simulated qubits; no real quantum-hardware validation.
+- Development diagnostics use two seeds and 200 steps, not a powered confirmatory study.
+- One frozen MNIST feature classifier supplies evaluation features and class predictions.
+- Matched Adam control trajectories are deliberate causal interventions, not ordinary
+  unconstrained training.
+- MPS was suitable for timing and smoke tests but not accepted for exact paired replay.
+- No claim of novelty should be made without a dedicated, current literature review.
 
----
+## Citation
 
-## ⚠️ Limitations Acknowledged
-
-1. **VQE provides no unique benefit** (proven by V2 ablation study)
-2. **Quantum module doesn't see data** — operates only on latent variables
-3. **Hamiltonian not learned from data** — static class-dependent coefficients
-4. **Simulator-only** — no real quantum hardware validation
-5. **Small scale** — 4 qubits, MNIST only
-6. **High overhead** — ~200× slower than classical ACGAN
-
----
-
-## 📖 Lessons Learned
-
-This project demonstrates the importance of **rigorous ablation studies** in quantum machine learning research. The initial results appeared promising, but classical controls revealed that:
-
-1. **Any class-dependent auxiliary signal** provides similar regularization
-2. **The quantum circuit's computational cost is not justified** by unique benefits
-3. **Negative results are valuable** — they prevent the field from pursuing dead ends
-
-We encourage other QML researchers to include classical ablation studies in their work.
-
----
-
-## 📖 Citation
+The existing preprint and its V2 result refer to the historical experiment, not to the unfinished
+V3 study:
 
 ```bibtex
 @misc{strnadel2025vqegan,
-  title={Differentiable Energy-Based Regularization in GANs: 
-         A Simulator-Based Exploration of VQE-Inspired Auxiliary Losses},
-  author={Strnadel, David},
-  year={2025},
-  note={V2 with ablation study. Negative result: VQE provides no 
-        measurable benefit over classical baselines. arXiv preprint.}
+  title  = {Differentiable Energy-Based Regularization in GANs:
+            A Simulator-Based Exploration of VQE-Inspired Auxiliary Losses},
+  author = {Strnadel, David},
+  year   = {2025},
+  note   = {V2 preprint with classical ablation study}
 }
 ```
 
----
+A separate V3 citation should be added only after its manuscript, version, and permanent identifier
+are frozen.
 
-## 🤝 Acknowledgments
+## Author and license
 
-- Prof. Roman Šenkeřík (Tomas Bata University in Zlin) for supervision
-- [Qiskit](https://qiskit.org/) and [PyTorch](https://pytorch.org/) teams
-- The QML community for emphasizing the need for rigorous ablation studies
+David Strnadel (GitHub: [o0SilentStorm0o](https://github.com/o0SilentStorm0o))<br>
+Contact: [davidstrnadel@seznam.cz](mailto:davidstrnadel@seznam.cz)
 
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file.
-
----
-
-**Author:** David Strnadel  
-**Affiliation:** Faculty of Applied Informatics, Tomas Bata University in Zlin  
-**Contact:** d_strnadel@utb.cz
-
-*This work reports a negative result. We publish it openly to benefit the quantum ML community and encourage critical evaluation of hybrid quantum-classical approaches.*
+Released under the [MIT License](LICENSE).
